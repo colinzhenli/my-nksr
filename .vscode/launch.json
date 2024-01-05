@@ -13,8 +13,8 @@
             "justMyCode": false,
             "args": [
                 "configs/scannet/train.yaml",
-                // "--url",
-                // "https://nksr.huangjh.tech/p2s.pth",
+                // "--ckpt",
+                // "/localhome/zla247/projects/data/output/Scannet/NKSR/nksr-scannet/pbuza9wy/checkpoints/epoch=229-val_loss=66.61.ckpt",
                 // "--include",
                 // "configs/points2surf/data_abc_test.yaml"
             ]  

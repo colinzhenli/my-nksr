@@ -5,7 +5,7 @@ wandb:
   base: "../data/output/Scannet/NKSR"
   # Optional upload path
   upload: "<REMOTE>:<PATH>"
-  wname: ScanNet_Voxel-0.02_run_1
+  wname: ScanNet_Voxel-0.5_no-noise_run_2
 
 # Specify this if you want to use tensorboard
 tb:

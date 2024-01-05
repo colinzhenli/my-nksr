@@ -44,11 +44,11 @@ if __name__ == '__main__':
     parser.add_argument('--focus', type=str, default="none", help='Sample to focus')
 
     known_args = parser.parse_known_args()[0]
-    args_ckpt = known_args.ckpt
+    args_ckpt = None
 
     if args_ckpt is not None:
         if args_ckpt.startswith("wdb:"):
-            wdb_run, args_ckpt = wdb.get_wandb_run(args_ckpt, wdb_base=zeus.config.wandb.base, default_ckpt="test_auto")
+            wdb_run, args_ckpt = wdb.get_wandb_run(args_ckpt, wdb_base=zeus.config.wandb.base, default_ckpt="last")
             assert args_ckpt is not None, "Please specify checkpoint version!"
             assert args_ckpt.exists(), "Selected checkpoint does not exist!"
             model_args = omegaconf.OmegaConf.create(wdb.recover_from_wandb_config(wdb_run.config))
@@ -77,6 +77,7 @@ if __name__ == '__main__':
     else:
         ckpt_path = args.weight
 
+    ckpt_path = known_args.ckpt
     try:
         if ckpt_path is not None:
             net_model = net_module.load_from_checkpoint(ckpt_path, hparams=args)

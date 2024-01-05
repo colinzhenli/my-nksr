@@ -12,9 +12,12 @@ from typing import Optional
 
 import torch
 import numpy as np
+import open3d as o3d
 from nksr import NKSRNetwork, SparseFeatureHierarchy
 from nksr.fields import KernelField, NeuralField, LayerField
 from nksr.configs import load_checkpoint_from_url
+from skimage.measure import marching_cubes
+
 
 from pycg import exp, vis
 
@@ -260,13 +263,48 @@ class Model(BaseModel):
 
         return loss_sum
 
+    def reconstruct_mesh(self, field, input_xyz):
+        grid_dim = 256
+        total_voxels = grid_dim ** 3  # 128x128x128
+
+        # Initialize voxel center coordinates
+        # points = data_dict['xyz'].detach()
+        # voxel_coords = data_dict['voxel_coords'][:, 1:4]  # M, 3
+        # voxel_center = voxel_coords * self.voxel_size + self.voxel_size / 2.0  # compute voxel_center in original coordinate system (torch.tensor)
+        # voxel_center = voxel_center.to(device)
+
+        # Compute grid range
+        min_range, _ = torch.min(input_xyz, axis=0)
+        max_range, _ = torch.max(input_xyz, axis=0)
+        grid_range = torch.linspace(min_range.min(), max_range.max(), steps=grid_dim)
+        print(min_range, max_range)
+
+        # Create uniform grid samples
+        grid_x, grid_y, grid_z = torch.meshgrid(grid_range, grid_range, grid_range)
+        samples = torch.stack([grid_x, grid_y, grid_z], dim=-1).reshape(1, total_voxels, 3).float().to(torch.device("cuda:0"))
+
+        sdf_res = field.evaluate_f(samples[0])
+        sdf = sdf_res.value
+
+        # Reshape the output to grid shape
+        sdf = sdf.reshape(grid_dim, grid_dim, grid_dim).cpu().numpy()
+        # udf = torch.clamp(torch.abs(sdf), max=0.4).cpu().numpy()
+        vertices, faces, normals, values = marching_cubes(sdf, level=0, spacing=[1.0/255] * 3)
+        # Create an Open3D mesh
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(vertices)
+        mesh.triangles = o3d.utility.Vector3iVector(faces)
+        mesh.vertex_normals = o3d.utility.Vector3dVector(normals)
+
+        return mesh
+
     def test_step(self, batch, batch_idx):
         test_transform, test_inv_transform = None, None
         if self.hparams.test_transform is not None:
             test_transform = ScaledIsometry.from_matrix(np.array(self.hparams.test_transform))
             test_inv_transform = test_transform.inv()
 
-        self.log('source', batch[DS.SHAPE_NAME][0])
+        self.log('source', batch[DS.SCENE_NAME][0])
 
         out = {'idx': batch_idx}
         self.transform_batch_input(batch, test_transform)
@@ -283,6 +321,7 @@ class Model(BaseModel):
         field = out['field']
         mesh_res = field.extract_dual_mesh(grid_upsample=self.hparams.test_n_upsample)
         mesh = vis.mesh(mesh_res.v, mesh_res.f)
+        # mesh = self.reconstruct_mesh(field, batch[DS.INPUT_PC][0])
 
         self.transform_batch_input(batch, test_inv_transform)
         if test_inv_transform is not None:
@@ -296,20 +335,36 @@ class Model(BaseModel):
             ref_xyz, ref_normal = batch[DS.GT_DENSE_PC][0], batch[DS.GT_DENSE_NORMAL][0]
 
         if self.hparams.test_print_metrics:
-            from metrics import MeshEvaluator
+            from metrics import UnitMeshEvaluator
 
-            evaluator = MeshEvaluator(
-                n_points=int(5e6) if ref_geometry is not None else int(5e5),
-                metric_names=MeshEvaluator.ESSENTIAL_METRICS)
+            evaluator = UnitMeshEvaluator(
+                n_points=100000,
+                metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
             onet_samples = None
             if DS.GT_ONET_SAMPLE in batch:
                 onet_samples = [
                     batch[DS.GT_ONET_SAMPLE][0][0].cpu().numpy(),
                     batch[DS.GT_ONET_SAMPLE][1][0].cpu().numpy()
                 ]
-            eval_dict = evaluator.eval_mesh(mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
+            eval_dict, translation, scale = evaluator.eval_mesh(mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
             self.log_dict(eval_dict)
             exp.logger.info("Metric: " + ", ".join([f"{k} = {v:.4f}" for k, v in eval_dict.items()]))
+
+            nksr_mesh = mesh
+            our_mesh = o3d.io.read_triangle_mesh("/localhome/zla247/projects/data/Visualizations/InterpolatedDecoder_Voxel-0.5_['scene0221_00']_noisy_CD-L1_0.0046_num-10000_mesh.obj")
+            gt_mesh = o3d.io.read_triangle_mesh("../data/Visualizations/gt_mesh.obj")  
+            nksr_mesh.translate(translation)
+            nksr_mesh.scale(scale, center=nksr_mesh.get_center())
+            # gt_centroid = compute_centroid(np.asarray(gt_mesh.vertices))
+            # our_centroid
+            # baseline_translation = mesh_centroid - baseline_centroid
+            # gt_translation = mesh_centroid - gt_centroid
+            # baseline_mesh.translate(baseline_translation)
+            # gt_mesh.translate(gt_translation)
+            our_eval_dict = evaluator.eval_mesh(our_mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
+            print(our_eval_dict)
+
+            o3d.io.write_triangle_mesh("../data/Visualizations/Noisy-0.025_Over-fit_nksr_mesh_voxel_0.5.obj", nksr_mesh)
 
         input_pc = batch[DS.INPUT_PC][0]
 
@@ -329,6 +384,7 @@ class Model(BaseModel):
                 viewport_shading='NORMAL', cam_path=f"../cameras/{self.get_dataset_short_name()}.bin"
             )
             self.overfit_logger.log_overfit_visuals({'scene': scenes[0]})
+
 
     @classmethod
     def transform_batch_input(cls, batch, transform: Optional[ScaledIsometry]):
