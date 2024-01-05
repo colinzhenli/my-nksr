@@ -17,7 +17,7 @@ runtime_density: false
 runtime_visualize: false
 
 # Print metrics during testing
-test_print_metrics: false
+test_print_metrics: true
 
 # Up-sampling rate during mesh extraction
 test_n_upsample: 2

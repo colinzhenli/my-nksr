@@ -4,6 +4,7 @@ from .av import AVDataset
 from .combined import CombinedDataset
 from .points2surf import Points2SurfDataset
 from .matterport import MatterportDataset
+from .scannet import ScanNetDataset
 
 
 def build_dataset(name: str, spec, hparams, kwargs: dict):

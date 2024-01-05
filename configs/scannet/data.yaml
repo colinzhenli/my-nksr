@@ -1,0 +1,42 @@
+
+# ScanNet Configs
+_scannet_transforms:
+  - name: "PointcloudNoise"
+    args: { "stddev": 0.0 }
+
+train_dataset: ScanNetDataset
+train_val_num_workers: 4
+over_fit: true
+
+train_kwargs:
+  base_path: "../../data/scannetv2"
+  over_fitting: ${over_fit}
+  num_input_points: 10000
+  std_dev: 0.0
+  dataset_name: "train"
+  transforms: ${_scannet_transforms}
+  split: "train"
+  random_seed: 0
+
+val_dataset: ScanNetDataset
+val_kwargs:
+  base_path: "../../data/scannetv2"
+  over_fitting: ${over_fit}
+  num_input_points: 10000
+  std_dev: 0.0
+  transforms: ${_scannet_transforms}
+  custom_name: "scannet"
+  split: "val"
+  random_seed: "fixed"
+
+test_dataset: ScanNetDataset
+test_num_workers: 4
+test_kwargs:
+  base_path: "../../data/scannetv2"
+  over_fitting: ${over_fit}
+  num_input_points: 10000
+  std_dev: 0.0
+  transforms: ${_scannet_transforms}
+  split: "test"
+  custom_name: "scannet"
+  random_seed: "fixed"

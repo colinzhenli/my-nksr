@@ -11,6 +11,7 @@ import requests
 from pathlib import Path
 from pycg import vis, exp
 from pyntcloud import PyntCloud
+import torch
 
 
 DOWNLOAD_URL = "https://nksr.huangjh.tech"
@@ -45,16 +46,19 @@ def load_buda_example():
 
 def load_scannet_example():
     scannet_path = Path(__file__).parent.parent / "assets" / "scannet.ply"
+    scannet_path = "/localhome/zla247/data/scannetv2/val/scene0221_00.pth"
+    scene = torch.load(scannet_path)
 
-    if not scannet_path.exists():
-        exp.logger.info("Downloading assets...")
-        res = requests.get(f"{DOWNLOAD_URL}/scannet-rgbd.ply")
-        with open(scannet_path, "wb") as f:
-            f.write(res.content)
-        exp.logger.info("Download finished!")
+    # if not scannet_path.exists():
+    #     exp.logger.info("Downloading assets...")
+    #     res = requests.get(f"{DOWNLOAD_URL}/scannet-rgbd.ply")
+    #     with open(scannet_path, "wb") as f:
+    #         f.write(res.content)
+    #     exp.logger.info("Download finished!")
 
-    scannet_geom = vis.from_file(scannet_path)
-    return scannet_geom
+    # scannet_geom = vis.from_file(scannet_path)
+    # return scannet_geom
+    return scene
 
 
 def load_waymo_example():

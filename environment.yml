@@ -1,4 +1,4 @@
-name: nksr
+name: nksr-2
 channels:
   - pyg
   - nvidia/label/cuda-11.8.0

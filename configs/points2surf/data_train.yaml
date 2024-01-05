@@ -4,7 +4,7 @@ include_configs:
 train_dataset: Points2SurfDataset
 train_val_num_workers: 4
 train_kwargs:
-  base_path: "../data/points2surf"
+  base_path: "../../data/points2surf"
   dataset_name: "train"
   type_name: "var-n"
   transforms: []
@@ -13,7 +13,7 @@ train_kwargs:
 
 val_dataset: Points2SurfDataset
 val_kwargs:
-  base_path: "../data/points2surf"
+  base_path: "../../data/points2surf"
   dataset_name: "train"
   type_name: "var-n"
   transforms: []

@@ -10,7 +10,8 @@ from enum import Enum
 
 
 class DatasetSpec(Enum):
-    SHAPE_NAME = 100
+    SCENE_NAME = 100
+    SHAPE_NAME = 0
     INPUT_PC = 200
     TARGET_NORMAL = 300
     INPUT_COLOR = 400
@@ -23,6 +24,7 @@ class DatasetSpec(Enum):
     GT_ONET_SAMPLE = 1100
     GT_GEOMETRY = 1200
     DATASET_CFG = 1300
+    
 
 
 class RandomSafeDataset(Dataset):

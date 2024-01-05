@@ -1,10 +1,11 @@
 # Specify this if you want to use wandb
 wandb:
-  user: ""
+  user: "koala_penguin"
   # Wandb checkpoint base directory
-  base: "./wandb/"
+  base: "../data/output/Scannet/NKSR"
   # Optional upload path
   upload: "<REMOTE>:<PATH>"
+  wname: ScanNet_Voxel-0.02_run_1
 
 # Specify this if you want to use tensorboard
 tb:

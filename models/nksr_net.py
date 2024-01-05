@@ -341,7 +341,7 @@ class Model(BaseModel):
             batch[DS.INPUT_SENSOR_POS][0] = transform @ batch[DS.INPUT_SENSOR_POS][0]
 
     def get_dataset_spec(self):
-        all_specs = [DS.SHAPE_NAME, DS.INPUT_PC,
+        all_specs = [DS.SCENE_NAME, DS.SHAPE_NAME, DS.INPUT_PC,
                      DS.GT_DENSE_PC, DS.GT_DENSE_NORMAL, DS.GT_ONET_SAMPLE,
                      DS.GT_GEOMETRY]
         if self.hparams.feature == 'normal':

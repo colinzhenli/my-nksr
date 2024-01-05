@@ -22,7 +22,6 @@ import tempfile
 import traceback
 from pathlib import Path
 from typing import List
-
 import pytorch_lightning as pl
 from datetime import datetime, timedelta
 import torch
@@ -51,7 +50,7 @@ def determine_usable_gpus():
 
     # Mismatched/missing CVD setting & #gpus, reset.
     gpu_states = exp.get_gpu_status("localhost")
-    available_gpus = [t for t in gpu_states if t.gpu_mem_usage < 0.2 and t.gpu_compute_usage < 0.2]
+    available_gpus = [t for t in gpu_states if t.gpu_mem_usage < 0.5 and t.gpu_compute_usage < 0.5]
 
     if len(available_gpus) == 0:
         exp.logger.fatal("You cannot use GPU. Everything is full.")
@@ -199,7 +198,7 @@ if __name__ == '__main__':
         assert len(zeus.config.wandb.user) > 0, "Please setup wandb user!"
         # Will create wandb folder automatically
         if not program_args.resume:
-            wname = program_args.wname
+            wname = zeus.config.wandb.wname
             if 'WANDB_SWEEP_ID' in os.environ.keys():
                 # (Use exec to determine good names)
                 wname = os.environ['WANDB_SWEEP_ID'] + "-" + readable_name_from_exec(model_args.exec)
@@ -213,7 +212,7 @@ if __name__ == '__main__':
             else:
                 project_name = model_args.name[:sep_pos]
                 run_name = model_args.name[sep_pos + 1:] + "/" + wname
-            logger = WandbLogger(name=run_name, save_dir=zeus.config.wandb.base, project='nkfw-' + project_name)
+            logger = WandbLogger(name=run_name, save_dir=zeus.config.wandb.base, project='nksr-' + project_name)
         else:
             logger = WandbLogger(name=wdb_run.name, save_dir=zeus.config.wandb.base, project=wdb_run.project, id=wdb_run.id)
             last_ckpt_path = wdb_ckpt
