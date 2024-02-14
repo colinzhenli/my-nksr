@@ -66,7 +66,7 @@ if __name__ == '__main__':
     if args.gpus is None:
         args.gpus = 1
 
-    trainer = pl.Trainer.from_argparse_args(argparse.Namespace(**args), logger=None, max_epochs=1)
+    trainer = pl.Trainer.from_argparse_args(argparse.Namespace(**args), logger=None, max_epochs=1, inference_mode=False)
     net_module = importlib.import_module("models." + args.model).Model
 
     # --ckpt & --weight logic:

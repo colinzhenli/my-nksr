@@ -310,6 +310,87 @@ class UnitMeshEvaluator:
             pointcloud, pointcloud_tgt, None, None, None)
         return out_dict
 
+    def eval_pointcloud(self, pointcloud, pointcloud_tgt,
+                        normals=None, normals_tgt=None,
+                        thresholds=np.linspace(1./1000, 1, 1000)):
+        ''' Evaluates a point cloud.
+
+        Args:
+            pointcloud (numpy array): predicted point cloud
+            pointcloud_tgt (numpy array): target point cloud
+            normals (numpy array): predicted normals
+            normals_tgt (numpy array): target normals
+            thresholds (numpy array): threshold values for the F-score calculation
+        '''
+        # Return maximum losses if pointcloud is empty
+        if pointcloud.shape[0] == 0:
+            logger.warn('Empty pointcloud / mesh detected!')
+            out_dict = EMPTY_PCL_DICT.copy()
+            if normals is not None and normals_tgt is not None:
+                out_dict.update(EMPTY_PCL_DICT_NORMALS)
+            return out_dict
+
+        pointcloud = np.asarray(pointcloud)
+        pointcloud_tgt = np.asarray(pointcloud_tgt)
+        pointcloud, pointcloud_tgt, translate, scale = sample_and_normalize_pointclouds(pointcloud, pointcloud_tgt)
+        # pointcloud_tgt, scale, translate = normalize_pointcloud_to_unit_cube(pointcloud_tgt)
+        # pointcloud_tgt = pointcloud_tgt + 0.5
+
+        # Completeness: how far are the points of the target point cloud
+        # from thre predicted point cloud
+        completeness, completeness_normals = distance_p2p(
+            pointcloud_tgt, normals_tgt, pointcloud, normals
+        )
+        recall = get_threshold_percentage(completeness, thresholds)
+        completeness2 = completeness**2
+
+        completeness = completeness.mean()
+        completeness2 = completeness2.mean()
+        completeness_normals = completeness_normals.mean()
+
+        # Accuracy: how far are th points of the predicted pointcloud
+        # from the target pointcloud
+        accuracy, accuracy_normals = distance_p2p(
+            pointcloud, normals, pointcloud_tgt, normals_tgt
+        )
+        precision = get_threshold_percentage(accuracy, thresholds)
+        accuracy2 = accuracy**2
+
+        accuracy = accuracy.mean()
+        accuracy2 = accuracy2.mean()
+        accuracy_normals = accuracy_normals.mean()
+
+        # Chamfer distance
+        chamferL2 = 0.5 * (completeness2 + accuracy2)
+        normals_correctness = (
+            0.5 * completeness_normals + 0.5 * accuracy_normals
+        )
+        chamferL1 = 0.5 * (completeness + accuracy)
+
+        # F-Score
+        F = [
+            2 * precision[i] * recall[i] / (precision[i] + recall[i])
+            for i in range(len(precision))
+        ]
+
+        out_dict = {
+            'completeness': completeness,
+            'accuracy': accuracy,
+            'normals completeness': completeness_normals,
+            'normals accuracy': accuracy_normals,
+            'normals': normals_correctness,
+            'completeness2': completeness2,
+            'accuracy2': accuracy2,
+            'chamfer-L2': chamferL2,
+            'chamfer-L1': chamferL1,
+            "f-score-05": F[4], # threshold = 0.5%
+            'f-score-10': F[9], # threshold = 1.0%
+            'f-score-15': F[14], # threshold = 1.5%
+            'f-score-20': F[19], # threshold = 2.0%
+        }
+
+        return out_dict, translate, scale
+
     def _evaluate(self, pointcloud, pointcloud_tgt, normals=None, normals_tgt=None, onet_samples=None, mesh=None):
         """
         Evaluates a point cloud.

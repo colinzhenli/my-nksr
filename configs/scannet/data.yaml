@@ -6,7 +6,7 @@ _scannet_transforms:
 
 train_dataset: ScanNetDataset
 train_val_num_workers: 4
-over_fit: false
+over_fit: true
 
 train_kwargs:
   base_path: "../../data/scannetv2"
@@ -37,6 +37,6 @@ test_kwargs:
   num_input_points: 10000
   std_dev: 0.0
   transforms: ${_scannet_transforms}
-  split: "test"
+  split: "val"
   custom_name: "scannet"
   random_seed: "fixed"

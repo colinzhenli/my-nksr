@@ -27,7 +27,7 @@ class ScanNetDataset(RandomSafeDataset):
 
         assert DS.GT_MESH not in spec and DS.GT_MESH_SOUP not in spec
         self.split = 'train' if self.over_fitting else split # use only train set for overfitting
-        # self.split = 'val'
+        self.split = 'val'
         self.spec = self.sanitize_specs(
             spec, [DS.SCENE_NAME, DS.INPUT_PC, DS.TARGET_NORMAL, DS.GT_DENSE_PC, DS.GT_DENSE_NORMAL])
         self.transforms = ComposedTransforms(transforms)
@@ -49,7 +49,7 @@ class ScanNetDataset(RandomSafeDataset):
         if self.over_fitting:
             self.scenes = self.scenes[self.intake_start:self.take+self.intake_start]
 
-        # self.scenes = ['scene0221_00']
+        self.scenes = ['scene0221_00']
         self.hparams = hparams
         self.partial_input = partial_input
 

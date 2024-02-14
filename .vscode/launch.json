@@ -14,10 +14,25 @@
             "args": [
                 "configs/scannet/train.yaml",
                 // "--ckpt",
-                // "/localhome/zla247/projects/data/output/Scannet/NKSR/nksr-scannet/pbuza9wy/checkpoints/epoch=229-val_loss=66.61.ckpt",
+                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=09-val_loss=119.95.ckpt",
+                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=08-val_loss=80.75.ckpt", # normal inputs             
                 // "--include",
                 // "configs/points2surf/data_abc_test.yaml"
             ]  
+            // "name": "Python: Current File",
+            // "type": "python",
+            // "request": "launch",
+            // "program": ".py",
+            // "console": "integratedTerminal",
+            // "justMyCode": false,
+            // "args": [
+            //     "configs/scannet/train.yaml",
+            //     "--ckpt",
+            //     // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=09-val_loss=119.95.ckpt",
+            //     "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=08-val_loss=80.75.ckpt",              
+            //     // "--include",
+            //     // "configs/points2surf/data_abc_test.yaml"
+            // ]  
         }
     ]
 }
