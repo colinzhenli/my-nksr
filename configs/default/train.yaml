@@ -7,7 +7,7 @@ model: nksr_net
 # -- Model parameters --
 
 feature: 'normal'
-geometry: 'kernel'
+geometry: 'neural'
 voxel_size: 0.02
 kernel_dim: 4
 tree_depth: 4
@@ -47,6 +47,7 @@ adaptive_policy:
   tau: 0.1
 
 supervision:
+  only_l1_sdf_loss: true
   structure_weight: 20.0
 
   gt_type: "PointTSDFVolume"

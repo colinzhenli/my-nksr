@@ -196,6 +196,8 @@ class Model(BaseModel):
 
         from models.loss import GTSurfaceLoss, SpatialLoss, StructureLoss, UDFLoss, ShapeNetIoUMetric
 
+        if self.hparams.supervision.only_l1_sdf_loss:
+            SpatialLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
         SpatialLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
         GTSurfaceLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
 
