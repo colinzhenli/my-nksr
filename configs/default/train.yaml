@@ -47,7 +47,7 @@ adaptive_policy:
   tau: 0.1
 
 supervision:
-  only_l1_sdf_loss: true
+  only_l1_sdf_loss: false
   structure_weight: 20.0
 
   gt_type: "PointTSDFVolume"

@@ -1,7 +1,7 @@
 include_configs:
   - data.yaml
 
-name: 'scannet/no-generalization'
+name: 'scannet/Analytical-grad_Voxel-0.02_NKSR-Attenction-Decoder_No-growing-Only-L1-Losses_overfit'
 
 adaptive_depth: 2
 

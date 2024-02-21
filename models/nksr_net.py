@@ -20,7 +20,6 @@ from nksr.fields import KernelField, NeuralField, LayerField
 from nksr.configs import load_checkpoint_from_url
 from skimage.measure import marching_cubes
 
-
 from pycg import exp, vis
 
 from dataset.base import DatasetSpec as DS, list_collate
@@ -120,7 +119,8 @@ class Model(BaseModel):
             output_field = NeuralField(
                 svh=dec_svh,
                 decoder=self.network.sdf_decoder,
-                features=feat.basis_features
+                features=feat.basis_features,
+                grad_type="analytical"
             )
 
         else:
@@ -198,14 +198,15 @@ class Model(BaseModel):
 
         if self.hparams.supervision.only_l1_sdf_loss:
             SpatialLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
-        SpatialLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
-        GTSurfaceLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
+        else:
+            SpatialLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
+            GTSurfaceLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
 
-        self.compute_gt_svh(batch, out)
-        StructureLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
+            self.compute_gt_svh(batch, out)
+            StructureLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
 
-        UDFLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
-        ShapeNetIoUMetric.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
+            UDFLoss.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
+            ShapeNetIoUMetric.apply(self.hparams, loss_dict, metric_dict, batch, out, compute_metric)
 
         return loss_dict, metric_dict
 
@@ -224,13 +225,14 @@ class Model(BaseModel):
 
     def should_use_pd_structure(self, is_val):
         # In case this returns True:
-        #   - The tree generation would completely rely on prediction, so does the supervision signal.
+        #   - The tree generation would completely rely on prediction, so does  he supervision signal.
         prob = (self.trainer.global_step - self.hparams.structure_schedule.start_step) / \
                (self.hparams.structure_schedule.end_step - self.hparams.structure_schedule.start_step)
         prob = min(max(prob, 0.0), 1.0)
         if not is_val:
             self.log("pd_struct_prob", prob, prog_bar=True, on_step=True, on_epoch=False)
-        return random.random() < prob
+        # return random.random() < prob
+        return False
 
     # @exp.mem_profile(every=1)
     def train_val_step(self, batch, batch_idx, is_val):
@@ -253,8 +255,8 @@ class Model(BaseModel):
 
         if not is_val:
             self.log_dict_prefix('train_loss', loss_dict)
-            if batch_idx % 200 == 0:
-                self.log_visualizations(batch, out, batch_idx)
+            # if batch_idx % 200 == 0:
+                # self.log_visualizations(batch, out, batch_idx)
         else:
             self.log_dict_prefix('val_metric', metric_dict)
             self.log_dict_prefix('val_loss', loss_dict)
@@ -421,12 +423,14 @@ class Model(BaseModel):
         mesh_res = field.extract_dual_mesh(grid_upsample=self.hparams.test_n_upsample)
         dmc_vertices = field.extract_dmc_vertices(grid_upsample=self.hparams.test_n_upsample)
 
-        torch.set_grad_enabled(True)
-        dense_pointcloud = self.generate_point_cloud(field, batch[DS.INPUT_PC][0], dmc_vertices)
-        torch.set_grad_enabled(False)
+        """ dense pointcloud """
+        # torch.set_grad_enabled(True)
+        # dense_pointcloud = self.generate_point_cloud(field, batch[DS.INPUT_PC][0], dmc_vertices)
+        # torch.set_grad_enabled(False)
 
         mesh = vis.mesh(mesh_res.v, mesh_res.f)
-        mesh = self.reconstruct_mesh(field, batch[DS.INPUT_PC][0])
+        """ naive marching cube mesh """
+        # mesh = self.reconstruct_mesh(field, batch[DS.INPUT_PC][0])
         self.transform_batch_input(batch, test_inv_transform)
         if test_inv_transform is not None:
             mesh = test_inv_transform @ mesh
@@ -450,16 +454,16 @@ class Model(BaseModel):
                     batch[DS.GT_ONET_SAMPLE][0][0].cpu().numpy(),
                     batch[DS.GT_ONET_SAMPLE][1][0].cpu().numpy()
                 ]
-            # eval_dict, translation, scale = evaluator.eval_mesh(mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
-            dense_pcd = o3d.geometry.PointCloud()
-            dense_pcd.points = o3d.utility.Vector3dVector(dense_pointcloud)
-            point_cloud_file = f"../data/Visualizations/NKSR_dense_pcd.ply"
-            o3d.io.write_point_cloud(point_cloud_file, dense_pcd)     
-            gt_pcd = o3d.geometry.PointCloud()
-            gt_pcd.points = o3d.utility.Vector3dVector(batch[DS.GT_DENSE_PC][0].cpu().numpy())
-            gt_point_cloud_file = f"../data/Visualizations/NKSR_gt_pcd.ply"
-            o3d.io.write_point_cloud(gt_point_cloud_file, gt_pcd) 
-            eval_dict, translation, scale = evaluator.eval_pointcloud(dense_pointcloud.astype(np.float32), ref_xyz.cpu().numpy())
+            eval_dict, translation, scale = evaluator.eval_mesh(mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
+            # dense_pcd = o3d.geometry.PointCloud()
+            # dense_pcd.points = o3d.utility.Vector3dVector(dense_pointcloud)
+            # point_cloud_file = f"../data/Visualizations/NKSR_dense_pcd.ply"
+            # o3d.io.write_point_cloud(point_cloud_file, dense_pcd)     
+            # gt_pcd = o3d.geometry.PointCloud()
+            # gt_pcd.points = o3d.utility.Vector3dVector(batch[DS.GT_DENSE_PC][0].cpu().numpy())
+            # gt_point_cloud_file = f"../data/Visualizations/NKSR_gt_pcd.ply"
+            # o3d.io.write_point_cloud(gt_point_cloud_file, gt_pcd) 
+            # eval_dict, translation, scale = evaluator.eval_pointcloud(dense_pointcloud.astype(np.float32), ref_xyz.cpu().numpy())
             self.log_dict(eval_dict)
             exp.logger.info("Metric: " + ", ".join([f"{k} = {v:.4f}" for k, v in eval_dict.items()]))
 
@@ -477,7 +481,7 @@ class Model(BaseModel):
             # # our_eval_dict = evaluator.eval_mesh(our_mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
             # # print(our_eval_dict)
 
-            o3d.io.write_triangle_mesh("../data/Visualizations/Naive-marchingcube_Normal_nksr_mesh_voxel_0.02.obj", mesh)
+            o3d.io.write_triangle_mesh("../data/Visualizations/Attention-decoder_all-losses_normal_voxel_0.02.obj", mesh)
 
         input_pc = batch[DS.INPUT_PC][0]
 

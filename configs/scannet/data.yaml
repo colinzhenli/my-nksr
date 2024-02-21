@@ -6,7 +6,7 @@ _scannet_transforms:
 
 train_dataset: ScanNetDataset
 train_val_num_workers: 4
-over_fit: true
+over_fit: false
 
 train_kwargs:
   base_path: "../../data/scannetv2"
