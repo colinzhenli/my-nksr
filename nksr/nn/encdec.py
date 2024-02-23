@@ -334,7 +334,24 @@ class Att_pooling(nn.Module):
 
         self.mlp = ActivationConv1d(d_in, d_out, kernel_size=1,bn=True, activation=activation_fn)
 
-    def forward(self, feature_set, alpha):
+    def forward(self, feature_set, alpha, mask=None):
+        if mask is not None:
+            mask = mask==False
+            # Flatten and filter feature_set according to mask
+            N, K, C = feature_set.shape
+            flat_features = feature_set.reshape(-1, C)  # Shape (N*K, C)
+            valid_indices = mask.flatten().nonzero().squeeze(-1)
+            filtered_features = flat_features[valid_indices]  # Shape (M, C), M << N*K
+            # Process filtered features with fc layers
+            fc_output = self.fc_layers(filtered_features)  # Shape (M, C)
+            # Map fc layer outputs back to original shape according to mask
+            # Create an output tensor filled with zeros
+            output = torch.zeros_like(flat_features)
+            # Place fc_output back according to valid_indices
+            output[valid_indices] = fc_output
+
+            # Reshape back to (N, K, C) and process with mlp if necessary
+            output = output.reshape(N, K, C)
         att_activation = self.fc_layers(feature_set)
         att_scores = F.softmax(att_activation, dim=1) # M, K, hidden_dim + feature_dim
         if self.alpha:
@@ -531,8 +548,11 @@ class AttentionMultiscalePointDecoder(nn.Module):
                 gathered_latents = multiscale_feat[d][indx] #N, K, C
                 alpha = self.sigmoid(self.alpha_map(gathered_latents)) # N, K, 1
                 if self.knn_mask:
-                    mask = dist < 1.5*svh.grids[d].voxel_size
-                    alpha[mask] = 0
+                    mask = dist > 1.5*svh.grids[d].voxel_size
+                    # alpha[mask] = 0
+                    alpha = torch.where(mask.unsqueeze(-1), torch.zeros_like(alpha), alpha)
+                else:
+                    mask = None
                 gathered_centers = coords[indx] #N, K, 3
                 gathered_query_xyz = xyz.unsqueeze(1).expand(-1, self.k_neighbors, -1) #N, K, 3
                 gathered_relative_coords = gathered_query_xyz - gathered_centers #N, K, 3
@@ -540,7 +560,7 @@ class AttentionMultiscalePointDecoder(nn.Module):
                 gathered_coords = self.coords_enc(gathered_relative_coords/ svh.grids[d].voxel_size)
                 gathered_emb_and_coords = torch.cat([gathered_latents, gathered_coords], dim=-1) # M, K, C + enc_dim
                 gathered_dist = torch.norm(gathered_relative_coords, dim=-1, keepdim=True) #N, K, 1
-                interpolated_features = self.att_pooling_layers[d](gathered_emb_and_coords, alpha) #M, 1, hidden_dim
+                interpolated_features = self.att_pooling_layers[d](gathered_emb_and_coords, alpha, mask) #M, 1, hidden_dim
                 c_feats.append(interpolated_features.squeeze(1))
 
         if self.aggregation == 'cat':
