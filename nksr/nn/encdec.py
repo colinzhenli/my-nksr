@@ -546,13 +546,14 @@ class AttentionMultiscalePointDecoder(nn.Module):
                 # dist = dist.squeeze(0)
                 # indx = indx.squeeze(0)
                 gathered_latents = multiscale_feat[d][indx] #N, K, C
-                alpha = self.sigmoid(self.alpha_map(gathered_latents)) # N, K, 1
-                if self.knn_mask:
-                    mask = dist > 1.5*svh.grids[d].voxel_size
-                    # alpha[mask] = 0
-                    alpha = torch.where(mask.unsqueeze(-1), torch.zeros_like(alpha), alpha)
-                else:
-                    mask = None
+                mask = None
+                alpha = None
+                if self.alpha:
+                    alpha = self.sigmoid(self.alpha_map(gathered_latents)) # N, K, 1
+                    if self.knn_mask:
+                        mask = dist > 1.5*svh.grids[d].voxel_size
+                        # alpha[mask] = 0
+                        alpha = torch.where(mask.unsqueeze(-1), torch.zeros_like(alpha), alpha)
                 gathered_centers = coords[indx] #N, K, 3
                 gathered_query_xyz = xyz.unsqueeze(1).expand(-1, self.k_neighbors, -1) #N, K, 3
                 gathered_relative_coords = gathered_query_xyz - gathered_centers #N, K, 3

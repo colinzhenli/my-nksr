@@ -11,8 +11,8 @@ geometry: 'neural'
 decoder:
   interpolation: 'attention' # trilinear or attention
   aggregation: 'cat' # cat or sum
-  alpha: true
-  knn_mask: true
+  alpha: false
+  knn_mask: false
   neigbor_level_mlp: true
 
 voxel_size: 0.02
@@ -64,18 +64,18 @@ supervision:
   gt_surface:
     value: 200.0
     normal: 100.0
-    subsample: 5000
+    subsample: 50000
 
   spatial:
     weight: 300.0
     reg_sdf_weight: 0.0
     samplers:
       - type: "uniform"
-        n_samples: 5000 
+        n_samples: 50000
         expand: 1
         expand_top: 3
       - type: "band"
-        n_samples: 5000
+        n_samples: 50000
         eps: 0.5    # Times voxel size.
     gt_type: "l1"   # or 'l1'
     gt_soft: true

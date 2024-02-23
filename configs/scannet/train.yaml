@@ -1,7 +1,7 @@
 include_configs:
   - data.yaml
 
-name: 'scannet/1.5-ratio-Masked_Alpha_Cat-grad_Voxel-0.02_Attenction-Decoder_No-growing_overfit'
+name: 'scannet/No_Alpha_Cat-grad_Voxel-0.02_Attenction-Decoder_No-growing_overfit'
 
 adaptive_depth: 2
 
