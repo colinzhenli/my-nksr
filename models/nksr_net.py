@@ -120,9 +120,8 @@ class Model(BaseModel):
                 svh=dec_svh,
                 decoder=self.network.sdf_decoder,
                 features=feat.basis_features,
-                grad_type="analytical"
+                grad_type="numerical"
             )
-
         else:
             raise NotImplementedError
 
@@ -231,8 +230,11 @@ class Model(BaseModel):
         prob = min(max(prob, 0.0), 1.0)
         if not is_val:
             self.log("pd_struct_prob", prob, prog_bar=True, on_step=True, on_epoch=False)
-        # return random.random() < prob
-        return False
+        
+        if self.hparams.no_voxel_growing:
+            return False
+        else:
+            return random.random() < prob
 
     # @exp.mem_profile(every=1)
     def train_val_step(self, batch, batch_idx, is_val):
@@ -481,7 +483,7 @@ class Model(BaseModel):
             # # our_eval_dict = evaluator.eval_mesh(our_mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
             # # print(our_eval_dict)
 
-            o3d.io.write_triangle_mesh("../data/Visualizations/Attention-decoder_all-losses_normal_voxel_0.02.obj", mesh)
+            # o3d.io.write_triangle_mesh("../data/Visualizations/No-growing_neuraldecoder_all-losses_normal_voxel_0.02.obj", mesh)
 
         input_pc = batch[DS.INPUT_PC][0]
 

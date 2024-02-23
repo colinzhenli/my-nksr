@@ -19,6 +19,51 @@ class KitchenSinkMetricLoss:
     def apply(cls, hparams, loss_dict, metric_dict, batch, out, compute_metric):
         raise NotImplementedError
 
+    # @classmethod
+    # def _get_svh_samples(cls, svh: SparseFeatureHierarchy,
+    #                      n_samples: int, expand: int = 0, expand_top: int = 0):
+    #     """
+    #     Get random samples, across all layers of the decoder hierarchy
+    #     :param n_samples: int, number of total samples
+    #     :param expand: size of expansion
+    #     :param expand_top: size of expansion of the coarsest level.
+    #     :return: (n_samples, 3)
+    #     """
+    #     base_coords, base_scales = [], []
+    #     for d in range(svh.depth):
+    #         if svh.grids[d] is None:
+    #             continue
+    #         ijk_coords = svh.grids[d].active_grid_coords()
+    #         d_expand = expand if d != svh.depth - 1 else expand_top
+    #         if d_expand >= 3:
+    #             mc_offsets = torch.arange(-d_expand // 2 + 1, d_expand // 2 + 1, device=svh.device)
+    #             mc_offsets = torch.stack(torch.meshgrid(mc_offsets, mc_offsets, mc_offsets, indexing='ij'), dim=3)
+    #             mc_offsets = mc_offsets.view(-1, 3)
+    #             ijk_coords = (ijk_coords.unsqueeze(dim=1).repeat(1, mc_offsets.size(0), 1) +
+    #                           mc_offsets.unsqueeze(0)).view(-1, 3)
+    #             ijk_coords = torch.unique(ijk_coords, dim=0)
+    #         base_coords.append(svh.grids[d].grid_to_world(ijk_coords.float()))
+    #         base_scales.append(torch.full((ijk_coords.size(0), ), svh.grids[d].voxel_size, device=svh.device))
+    #     base_coords, base_scales = torch.cat(base_coords), torch.cat(base_scales)
+    #     N, _ = base_coords.shape
+    #     x_min, x_max = base_coords[:, 0].min(), base_coords[:, 0].max()
+    #     y_min, y_max = base_coords[:, 1].min(), base_coords[:, 1].max()
+    #     z_min, z_max = base_coords[:, 2].min(), base_coords[:, 2].max()
+    #     sample_size = int(0.002 * N)
+    #     # Randomly sample points within the range
+    #     x_samples = torch.rand(sample_size, device=svh.device) * (x_max - x_min) + x_min
+    #     y_samples = torch.rand(sample_size, device=svh.device) * (y_max - y_min) + y_min
+    #     z_samples = torch.rand(sample_size, device=svh.device) * (z_max - z_min) + z_min
+    #     # Combine samples into a tensor
+    #     scales = torch.zeros(sample_size, device=svh.device)
+    #     samples = torch.stack((x_samples, y_samples, z_samples), dim=1)
+    #     # Concatenate the samples back to base_coords
+    #     base_coords = torch.cat((base_coords, samples), dim=0)
+    #     base_scales = torch.cat((base_scales, scales), dim=0)
+    #     local_ids = (torch.rand((n_samples, ), device=svh.device) * base_coords.size(0)).long()
+    #     local_coords = (torch.rand((n_samples, 3), device=svh.device) - 0.5) * base_scales[local_ids, None]
+    #     query_pos = base_coords[local_ids] + local_coords
+    #     return query_pos
     @classmethod
     def _get_svh_samples(cls, svh: SparseFeatureHierarchy,
                          n_samples: int, expand: int = 0, expand_top: int = 0):
@@ -45,21 +90,6 @@ class KitchenSinkMetricLoss:
             base_coords.append(svh.grids[d].grid_to_world(ijk_coords.float()))
             base_scales.append(torch.full((ijk_coords.size(0), ), svh.grids[d].voxel_size, device=svh.device))
         base_coords, base_scales = torch.cat(base_coords), torch.cat(base_scales)
-        N, _ = base_coords.shape
-        x_min, x_max = base_coords[:, 0].min(), base_coords[:, 0].max()
-        y_min, y_max = base_coords[:, 1].min(), base_coords[:, 1].max()
-        z_min, z_max = base_coords[:, 2].min(), base_coords[:, 2].max()
-        sample_size = int(0.002 * N)
-        # Randomly sample points within the range
-        x_samples = torch.rand(sample_size, device=svh.device) * (x_max - x_min) + x_min
-        y_samples = torch.rand(sample_size, device=svh.device) * (y_max - y_min) + y_min
-        z_samples = torch.rand(sample_size, device=svh.device) * (z_max - z_min) + z_min
-        # Combine samples into a tensor
-        scales = torch.zeros(sample_size, device=svh.device)
-        samples = torch.stack((x_samples, y_samples, z_samples), dim=1)
-        # Concatenate the samples back to base_coords
-        base_coords = torch.cat((base_coords, samples), dim=0)
-        base_scales = torch.cat((base_scales, scales), dim=0)
         local_ids = (torch.rand((n_samples, ), device=svh.device) * base_coords.size(0)).long()
         local_coords = (torch.rand((n_samples, 3), device=svh.device) - 0.5) * base_scales[local_ids, None]
         query_pos = base_coords[local_ids] + local_coords

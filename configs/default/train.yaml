@@ -8,6 +8,13 @@ model: nksr_net
 
 feature: 'normal'
 geometry: 'neural'
+decoder:
+  interpolation: 'attention' # trilinear or attention
+  aggregation: 'cat' # cat or sum
+  alpha: true
+  knn_mask: true
+  neigbor_level_mlp: true
+
 voxel_size: 0.02
 kernel_dim: 4
 tree_depth: 4
@@ -25,7 +32,7 @@ interpolator:
   hidden_dim: 16
 
 solver:
-  pos_weight: 10000.0
+  pos_weight: 10000.0                                                                
   normal_weight: 10000.0
 
 # -- Training & Supervision parameters --
@@ -46,6 +53,8 @@ adaptive_policy:
   method: "normal"
   tau: 0.1
 
+no_voxel_growing: true
+
 supervision:
   only_l1_sdf_loss: false
   structure_weight: 20.0
@@ -55,18 +64,18 @@ supervision:
   gt_surface:
     value: 200.0
     normal: 100.0
-    subsample: 50000
+    subsample: 5000
 
   spatial:
     weight: 300.0
     reg_sdf_weight: 0.0
     samplers:
       - type: "uniform"
-        n_samples: 50000
+        n_samples: 5000 
         expand: 1
         expand_top: 3
       - type: "band"
-        n_samples: 50000
+        n_samples: 5000
         eps: 0.5    # Times voxel size.
     gt_type: "l1"   # or 'l1'
     gt_soft: true
@@ -76,14 +85,15 @@ supervision:
     vol_sup: true
 
   udf:
-    weight: 150.0
+    # weight: 150.0
+    weight: 0.0
     samplers:
       - type: "uniform"
-        n_samples: 80000
+        n_samples: 8000
         expand: 1
         expand_top: 5
       - type: "band"
-        n_samples: 20000
+        n_samples: 2000
         eps: 0.5    # Times voxel size.
 
 structure_schedule:
