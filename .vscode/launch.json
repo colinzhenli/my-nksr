@@ -8,17 +8,20 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "train.py",
+            "program": "test.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
                 "configs/scannet/train.yaml",
-                // "--ckpt",
+                "--ckpt",
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Voxel-0.02_NeuralDecoder_No-growing_All-losses_epoch=85-val_loss=64.86.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=09-val_loss=119.95.ckpt",
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/neural-decoder_all-losses_epoch=90-val_loss=83.53.ckpt",
+                "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Voxel-0.02_AttentionDecoder_No-growing_No-UDF-losses_epoch=35-val_loss=67.56.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/neural-decoder_only-l1_epoch=07-val_loss=42.38.ckpt", 
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=08-val_loss=80.75.ckpt", # normal inputs  
+                // normal inputs 
+                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=08-val_loss=80.75.ckpt", 
+                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/All-Samples_1.5Mask_Alpha_Cat_Voxel-0.02_Attention-Decoder_No-growing_theia_epoch=11-val_loss=73.47.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/attention-decoder_all-losses_epoch=03-val_loss=228.80.ckpt",         
                 // "--include",
                 // "configs/points2surf/data_abc_test.yaml"
@@ -26,7 +29,7 @@
             // "name": "Python: Current File",
             // "type": "python",
             // "request": "launch",
-            // "program": ".py",
+            // "program": "examples/recons_scannet.py",
             // "console": "integratedTerminal",
             // "justMyCode": false,
             // "args": [

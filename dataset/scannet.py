@@ -22,7 +22,7 @@ class ScanNetDataset(RandomSafeDataset):
         self.over_fitting = kwargs.get("over_fitting", False)
         self.intake_start = kwargs.get("intake_start", 0)
         self.take = kwargs.get("take", 4)
-        self.num_input_points = kwargs.get("num_input_points", 10000)
+        self.num_input_points = kwargs.get("num_input_points", 5000)
         self.std_dev = kwargs.get("std_dev", 0.00)
 
         assert DS.GT_MESH not in spec and DS.GT_MESH_SOUP not in spec

@@ -66,7 +66,8 @@ class NKSRNetwork(torch.nn.Module):
                     aggregation=self.hparams.decoder.aggregation,
                     coords_depths=[2, 3],
                     alpha=self.hparams.decoder.alpha,
-                    knn_mask = self.hparams.decoder.knn_mask
+                    knn_mask = self.hparams.decoder.knn_mask,
+                    neighbor_level_mlp=self.hparams.decoder.neighbor_level_mlp,
                 )
 
             normal_channels = 0
@@ -146,7 +147,7 @@ class Reconstructor:
     """
     Main Reconstructor class
     """
-    def __init__(self, device: Device, config: Union[str, Mapping] = 'ks'):
+    def __init__(self, network, device: Device, config: Union[str, Mapping] = 'ks'):
         """
         Args:
             device (torch.device): device to run the reconstructor on.
@@ -155,9 +156,10 @@ class Reconstructor:
         self.device = get_device(device)
         self.chunk_tmp_device = self.device
         self.hparams = get_hparams(config)
-        self.network = NKSRNetwork(self.hparams).to(self.device).eval().requires_grad_(False)
-        ckpt_data = load_checkpoint_from_url(self.hparams.url)
-        self.network.load_state_dict(ckpt_data['state_dict'])
+        # self.network = NKSRNetwork(self.hparams).to(self.device).eval().requires_grad_(False)
+        self.network = network.to(self.device).eval().requires_grad_(False)
+        # ckpt_data = load_checkpoint_from_url(self.hparams.url)
+        # self.network.load_state_dict(ckpt_data['state_dict'])
 
     def set_chunk_tmp_device(self, device: Device) -> None:
         """
@@ -310,7 +312,8 @@ class Reconstructor:
             output_field = NeuralField(
                 svh=svh,
                 decoder=self.network.sdf_decoder,
-                features=feat.basis_features
+                features=feat.basis_features,
+                grad_type='analytical'
             )
 
         else:
@@ -324,7 +327,8 @@ class Reconstructor:
             )
             mask_field.set_level_set(2 * self.hparams.voxel_size)
         else:
-            mask_field = LayerField(svh, self.hparams.adaptive_depth)
+            mask_field = None
+            # mask_field = LayerField(svh, self.hparams.adaptive_depth)
 
         output_field.set_mask_field(mask_field)
         output_field.clear_svh_kernel_maps()

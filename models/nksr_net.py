@@ -61,7 +61,8 @@ class Model(BaseModel):
         enc_svh = SparseFeatureHierarchy(
             voxel_size=self.hparams.voxel_size,
             depth=self.hparams.tree_depth,
-            device=self.device
+            # device=self.device
+            device=torch.device("cpu")
         )
         enc_svh.build_point_splatting(input_xyz)
 
@@ -172,7 +173,8 @@ class Model(BaseModel):
         gt_svh = SparseFeatureHierarchy(
             voxel_size=self.hparams.voxel_size,
             depth=self.hparams.tree_depth,
-            device=self.device
+            # device=self.device
+            device=torch.device("cpu")
         )
 
         if self.hparams.adaptive_policy.method == "normal":
@@ -401,6 +403,7 @@ class Model(BaseModel):
         return mesh
 
     def test_step(self, batch, batch_idx):
+        # Assuming 'batch' is a dictionary containing your data tensors
         test_transform, test_inv_transform = None, None
         if self.hparams.test_transform is not None:
             test_transform = ScaledIsometry.from_matrix(np.array(self.hparams.test_transform))

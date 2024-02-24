@@ -18,8 +18,8 @@ __configs__ = {
     'ks': {
         'url': 'https://nksr.huangjh.tech/ks.pth',
         'feature': 'normal',
-        'geometry': 'kernel',
-        'voxel_size': 0.1,
+        'geometry': 'neural',
+        'voxel_size': 0.02,
         'kernel_dim': 4,
         'tree_depth': 4,
         'adaptive_depth': 2,
@@ -27,7 +27,7 @@ __configs__ = {
             'f_maps': 32
         },
         'udf': {
-            'enabled': True
+            'enabled': False
         },
         'interpolator': {
             'n_hidden': 2,

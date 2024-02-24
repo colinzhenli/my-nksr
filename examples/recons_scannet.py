@@ -136,8 +136,9 @@ def reconstruct_mesh(field, input_xyz):
     return mesh
 
 if __name__ == '__main__':
-    device = torch.device("cuda:0")
-    std_dev = 0.1
+    # device = torch.device("cuda:0")
+    device = torch.device("cpu")
+    std_dev = 0.0
     scannet_geom = load_scannet_example()
     num_input_points = 10000
     input_xyz = torch.from_numpy(scannet_geom["xyz"]).float().to(device)
@@ -160,31 +161,31 @@ if __name__ == '__main__':
     mesh_res = field.extract_dual_mesh(mise_iter=2)
     nksr_mesh = vis.mesh(mesh_res.v, mesh_res.f)
     # nksr_mesh = reconstruct_mesh(field, input_xyz)
-    torch.set_grad_enabled(True)
-    dense_pointcloud = generate_point_cloud(field, sparse_input_xyz)
-    torch.set_grad_enabled(False)
+    # torch.set_grad_enabled(True)
+    # dense_pointcloud = generate_point_cloud(field, sparse_input_xyz)
+    # torch.set_grad_enabled(False)
 
     evaluator = UnitMeshEvaluator(
         n_points=100000,
         metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
     onet_samples = None
-    # eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, input_xyz, input_normal, onet_samples=onet_samples)
-    eval_dict, translation, scale = evaluator.eval_pointcloud(dense_pointcloud, input_xyz, sparse_input_xyz)
+    eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, input_xyz, input_normal, onet_samples=onet_samples)
+    # eval_dict, translation, scale = evaluator.eval_pointcloud(dense_pointcloud, input_xyz, sparse_input_xyz)
 
     print(eval_dict)
-    our_mesh = o3d.io.read_triangle_mesh("/localhome/zla247/projects/data/Visualizations/InterpolatedDecoder_Voxel-0.5_['scene0221_00']_noisy_CD-L1_0.0046_num-10000_mesh.obj")
-    gt_mesh = o3d.io.read_triangle_mesh("../projects/data/Visualizations/gt_mesh.obj")  
-    nksr_mesh.translate(translation)
-    nksr_mesh.scale(scale, center=nksr_mesh.get_center())
+    # our_mesh = o3d.io.read_triangle_mesh("/localhome/zla247/projects/data/Visualizations/InterpolatedDecoder_Voxel-0.5_['scene0221_00']_noisy_CD-L1_0.0046_num-10000_mesh.obj")
+    # gt_mesh = o3d.io.read_triangle_mesh("../projects/data/Visualizations/gt_mesh.obj")  
+    # nksr_mesh.translate(translation)
+    # nksr_mesh.scale(scale, center=nksr_mesh.get_center())
     # gt_centroid = compute_centroid(np.asarray(gt_mesh.vertices))
     # our_centroid
     # baseline_translation = mesh_centroid - baseline_centroid
     # gt_translation = mesh_centroid - gt_centroid
     # baseline_mesh.translate(baseline_translation)
     # gt_mesh.translate(gt_translation)
-    our_eval_dict = evaluator.eval_mesh(our_mesh, input_xyz, input_normal, onet_samples=onet_samples)
-    print(our_eval_dict)
+    # our_eval_dict = evaluator.eval_mesh(our_mesh, input_xyz, input_normal, onet_samples=onet_samples)
+    # print(our_eval_dict)
 
-    o3d.io.write_triangle_mesh("../projects/data/Visualizations/0.1_noisy_nksr_mesh_voxel_0.1.obj", nksr_mesh)
+    o3d.io.write_triangle_mesh("../projects/data/Visualizations/0nksr_mesh_voxel_0.02.obj", nksr_mesh)
 
     # eval_res = field.evaluate_f(ref_xyz[ref_xyz_inds], grad=compute_grad)
