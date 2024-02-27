@@ -61,8 +61,7 @@ class Model(BaseModel):
         enc_svh = SparseFeatureHierarchy(
             voxel_size=self.hparams.voxel_size,
             depth=self.hparams.tree_depth,
-            # device=self.device
-            device=torch.device("cpu")
+            device=self.device
         )
         enc_svh.build_point_splatting(input_xyz)
 
@@ -121,7 +120,7 @@ class Model(BaseModel):
                 svh=dec_svh,
                 decoder=self.network.sdf_decoder,
                 features=feat.basis_features,
-                grad_type="numerical"
+                # grad_type='analytical'
             )
         else:
             raise NotImplementedError
@@ -173,8 +172,7 @@ class Model(BaseModel):
         gt_svh = SparseFeatureHierarchy(
             voxel_size=self.hparams.voxel_size,
             depth=self.hparams.tree_depth,
-            # device=self.device
-            device=torch.device("cpu")
+            device=self.device
         )
 
         if self.hparams.adaptive_policy.method == "normal":

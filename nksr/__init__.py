@@ -63,6 +63,7 @@ class NKSRNetwork(torch.nn.Module):
                 self.sdf_decoder = AttentionMultiscalePointDecoder(
                     c_each_dim=self.hparams.kernel_dim,
                     multiscale_depths=self.hparams.tree_depth,
+                    n_blocks=self.hparams.decoder.n_blocks,
                     aggregation=self.hparams.decoder.aggregation,
                     coords_depths=[2, 3],
                     alpha=self.hparams.decoder.alpha,
@@ -313,7 +314,8 @@ class Reconstructor:
                 svh=svh,
                 decoder=self.network.sdf_decoder,
                 features=feat.basis_features,
-                grad_type='analytical'
+                # grad_type='analytical'
+                grad_type='numerical'
             )
 
         else:

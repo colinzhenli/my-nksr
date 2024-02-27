@@ -320,15 +320,17 @@ class MultiscalePointDecoder(nn.Module):
         return out
 
 class Att_pooling(nn.Module):
-    def __init__(self, d_in, d_out, alpha, neighbor_level_mlp, activation_fn):
+    def __init__(self, d_in, d_out, alpha, blocks, neighbor_level_mlp, activation_fn):
         super().__init__()
         self.alpha = alpha
+        hidden_dim = d_in
         if neighbor_level_mlp:
-            self.fc_layers = nn.Sequential(
-                nn.Linear(d_in, d_in),  
-                activation_fn,              
-                nn.Linear(d_in, d_in)   
-            )
+            layers = []
+            layers.append(nn.Linear(d_in, hidden_dim))
+            for _ in range(blocks):
+                layers.append(ResnetBlockFC(hidden_dim))
+            layers.append(nn.Linear(hidden_dim, d_out))
+            self.fc_layers = nn.Sequential(*layers)
         else:
             self.fc_layers = nn.Linear(d_in, d_in)
 
@@ -457,7 +459,7 @@ class AttentionMultiscalePointDecoder(nn.Module):
             self.sigmoid = nn.Sigmoid()
 
         self.att_pooling_layers = nn.ModuleList({
-            Att_pooling(self.enc_dim + self.c_each_dim, self.enc_dim + self.c_each_dim, self.alpha, self.neighbor_level_mlp, self.activation_fn)
+            Att_pooling(self.enc_dim + self.c_each_dim, self.enc_dim + self.c_each_dim, self.alpha, n_blocks, self.neighbor_level_mlp, self.activation_fn)
             for d in range(self.multiscale_depths)  # Assuming you need a layer for each scale depth
         })
 
@@ -551,7 +553,7 @@ class AttentionMultiscalePointDecoder(nn.Module):
                 if self.alpha:
                     alpha = self.sigmoid(self.alpha_map(gathered_latents)) # N, K, 1
                     if self.knn_mask:
-                        mask = dist > 1.5*svh.grids[d].voxel_size
+                        mask = dist > svh.grids[d].voxel_size
                         # alpha[mask] = 0
                         alpha = torch.where(mask.unsqueeze(-1), torch.zeros_like(alpha), alpha)
                 gathered_centers = coords[indx] #N, K, 3

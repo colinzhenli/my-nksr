@@ -10,10 +10,11 @@ feature: 'normal'
 geometry: 'neural'
 decoder:
   interpolation: 'attention' # trilinear or attention
+  n_blocks: 2
   aggregation: 'cat' # cat or sum
-  alpha: false
-  knn_mask: false
-  neighbor_level_mlp: false
+  alpha: true
+  knn_mask: true
+  neighbor_level_mlp: true
 
 voxel_size: 0.02
 kernel_dim: 4

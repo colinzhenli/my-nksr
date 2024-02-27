@@ -27,7 +27,7 @@ __configs__ = {
             'f_maps': 32
         },
         'udf': {
-            'enabled': False
+            'enabled': True
         },
         'interpolator': {
             'n_hidden': 2,

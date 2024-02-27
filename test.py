@@ -20,6 +20,9 @@ from pycg import vis, exp
 from pathlib import Path
 import numpy as np
 from metrics import UnitMeshEvaluator
+from torch.utils.data import Dataset
+from tqdm import tqdm
+
 
 import zeus
 import bdb
@@ -39,6 +42,66 @@ def get_default_parser():
     default_parser = pl.Trainer.add_argparse_args(default_parser)
     return default_parser
 
+class ScanNetDataset(Dataset):
+    def __init__(self, split, partial_input=False, **kwargs):
+        self.over_fitting = kwargs.get("over_fitting", False)
+        self.num_input_points = kwargs.get("num_input_points", 5000)
+        self.std_dev = kwargs.get("std_dev", 0.00)
+
+        self.split = 'train' if self.over_fitting else split # use only train set for overfitting
+        self.base_path = Path(kwargs.get("base_path", None))
+
+        if self.split == "test":
+            with (self.base_path / "metadata" / "scannetv2_test.txt").open() as f:
+                self.scenes = [t.strip() for t in f.readlines()]
+        elif self.split == "train":
+            with (self.base_path / "metadata" / "scannetv2_train.txt").open() as f:
+                self.scenes = [t.strip() for t in f.readlines()]
+        else:
+            with (self.base_path / "metadata" / "scannetv2_val.txt").open() as f:
+                self.scenes = [t.strip() for t in f.readlines()]
+        
+        # self.scenes = self.scenes[:4]
+        if self.over_fitting:
+            self.split = 'val'
+            self.scenes = ['scene0221_00']
+        
+    def __len__(self):
+        return len(self.scenes)
+
+    def _get_item(self, data_id, rng):
+        scene_name = self.scenes[data_id]
+
+        data = {}
+        scene_path = os.path.join(self.base_path, self.split, f"{scene_name}.pth")
+        full_data = torch.load(scene_path)
+        full_points = full_data['xyz'].astype(np.float32)
+        full_normals = full_data['normal'].astype(np.float32)
+
+        if self.num_input_points != -1:
+            sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
+            partial_points = full_points[sample_indices]
+            partial_normals = full_normals[sample_indices]
+
+        else:
+            partial_points = full_points
+            partial_normals = full_normals
+
+        if isinstance(self.std_dev, (float, int)):
+            std_dev = [self.std_dev] * 3  # Same standard deviation for x, y, z
+        noise = np.random.normal(0, self.std_dev, partial_points.shape)
+        partial_points += noise
+
+        data = {
+            "partial_input": partial_points,
+            "partial_normal": partial_normals,
+            "full_input": full_points,
+            "full_normal": full_normals
+        }
+
+        return data
+
+    
 def load_scannet_example():
     scannet_path = Path(__file__).parent.parent / "assets" / "scannet.ply"
     scannet_path = "/localhome/zla247/data/scannetv2/val/scene0221_00.pth"
@@ -111,42 +174,39 @@ if __name__ == '__main__':
         net_model.overfit_logger = zeus.OverfitLoggerNull()
 
         """ test from reconstructor """
+        # Initialize the ScanNetDataset
+        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/data/scannetv2', over_fitting=True, num_input_points=10000, std_dev=0.025)
+        # Initialize a device
         device = torch.device("cpu")
-        std_dev = 0.0
-        scannet_geom = load_scannet_example()
-        num_input_points = 10000
-        input_xyz = torch.from_numpy(scannet_geom["xyz"]).float().to(device)
-        input_normal = torch.from_numpy(scannet_geom["normal"]).float().to(device)
+        # Prepare to accumulate evaluation metrics
+        accumulated_eval_dict = {metric: 0.0 for metric in UnitMeshEvaluator.ALL_METRICS}
+        total_scenes = len(dataset)
+        for data_id in tqdm(range(total_scenes), desc="Processing scenes"):
+            # Get the data for the current scene
+            data = dataset._get_item(data_id, np.random.default_rng())
+            # Move data to the desired device and add noise if necessary
+            sparse_input_xyz = torch.from_numpy(data['partial_input']).float().to(device)
+            sparse_input_normal = torch.from_numpy(data['partial_normal']).float().to(device)
+            # Reconstruct the scene
+            reconstructor = nksr.Reconstructor(net_model.network, device)
+            field = reconstructor.reconstruct(sparse_input_xyz, sparse_input_normal, voxel_size=0.02)
+            mesh_res = field.extract_dual_mesh(mise_iter=0)
+            nksr_mesh = vis.mesh(mesh_res.v, mesh_res.f)
+            # Evaluate the reconstructed mesh
+            evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
+            eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
+            o3d.io.write_triangle_mesh("../../projects/data/Visualizations/Noisy_attention_mesh_voxel_0.02.obj", nksr_mesh)
+            # Accumulate evaluation metrics
+            for key in accumulated_eval_dict.keys():
+                if key in eval_dict:
+                    accumulated_eval_dict[key] += eval_dict[key]
+                    # Print the updated value for the current key
+                    print(f"{key}: {eval_dict[key]}")
 
-        sample_indices = torch.randperm(input_xyz.shape[0])[:num_input_points]
-        sparse_input_xyz = input_xyz[sample_indices]
-        sparse_input_normal = input_normal[sample_indices]
-        if isinstance(std_dev, (float, int)):
-            std_dev = [std_dev] * 3  # Same standard deviation for x, y, z
-        noise = torch.from_numpy(np.random.normal(0, std_dev, [num_input_points, 3])).to(device)
-        sparse_input_xyz += noise
-        sparse_input_normal += noise
 
-        # input_xyz = torch.from_numpy(np.asarray(scannet_geom.points)).float().to(device)
-        # input_normal = torch.from_numpy(np.asarray(scannet_geom.normals)).float().to(device)
-
-        reconstructor = nksr.Reconstructor(net_model.network, device)
-        field = reconstructor.reconstruct(sparse_input_xyz, sparse_input_normal, voxel_size=0.02)
-        mesh_res = field.extract_dual_mesh(mise_iter=0)
-        nksr_mesh = vis.mesh(mesh_res.v, mesh_res.f)
-        # nksr_mesh = reconstruct_mesh(field, input_xyz)
-        # torch.set_grad_enabled(True)
-        # dense_pointcloud = generate_point_cloud(field, sparse_input_xyz)
-        # torch.set_grad_enabled(False)
-
-        evaluator = UnitMeshEvaluator(
-            n_points=100000,
-            metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
-        onet_samples = None
-        eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, input_xyz, input_normal, onet_samples=onet_samples)
-        print(eval_dict)
-
-        o3d.io.write_triangle_mesh("../../projects/data/Visualizations/0nksr_mesh_voxel_0.02.obj", nksr_mesh)
+        # Compute the average evaluation metrics
+        average_eval_dict = {key: value / total_scenes for key, value in accumulated_eval_dict.items()}
+        print("Average Evaluation Metrics:", average_eval_dict)
 
         # with exp.pt_profile_named("trainer.test", "test.json"):
         #     test_result = trainer.test(net_model)
