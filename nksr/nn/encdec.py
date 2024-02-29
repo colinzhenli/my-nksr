@@ -326,14 +326,18 @@ class Att_pooling(nn.Module):
         hidden_dim = d_in
         if neighbor_level_mlp:
             layers = []
-            layers.append(nn.Linear(d_in, hidden_dim))
             for _ in range(blocks):
-                layers.append(ResnetBlockFC(hidden_dim))
-            layers.append(nn.Linear(hidden_dim, d_out))
+                layers.append(ResnetBlockFC(d_in))
+            layers.append(nn.Linear(d_in, d_out))
             self.fc_layers = nn.Sequential(*layers)
+            # self.fc_layers = nn.Sequential(
+            #     nn.Linear(d_in, d_in),  
+            #     activation_fn,              
+            #     nn.Linear(d_in, d_in)   
+            # )
         else:
             self.fc_layers = nn.Linear(d_in, d_in)
-
+        self.score_fc = nn.Linear(d_in, d_in)
         self.mlp = ActivationConv1d(d_in, d_out, kernel_size=1,bn=True, activation=activation_fn)
 
     def forward(self, feature_set, alpha, mask=None):
@@ -354,13 +358,13 @@ class Att_pooling(nn.Module):
 
             # Reshape back to (N, K, C) and process with mlp if necessary
             output = output.reshape(N, K, C)
-        att_activation = self.fc_layers(feature_set)
+        att_activation = self.score_fc(feature_set)
         att_scores = F.softmax(att_activation, dim=1) # M, K, hidden_dim + feature_dim
         if self.alpha:
             att_scores = alpha * att_scores
             att_scores = att_scores / (torch.sum(att_scores, dim=1, keepdim=True) + 1e-5)
         # normalize att_scores #
-        f_agg = feature_set * att_scores #M, K, hidden_dim + feature_dim
+        f_agg = output * att_scores #M, K, hidden_dim + feature_dim
         f_agg = torch.sum(f_agg, dim=1, keepdim=True) # M, 1, hidden_dim + feature_dim
         f_agg = self.mlp(f_agg) #M, 1, hidden_dim + feature_dim
         return f_agg #M, 1, hidden_dim
@@ -553,7 +557,7 @@ class AttentionMultiscalePointDecoder(nn.Module):
                 if self.alpha:
                     alpha = self.sigmoid(self.alpha_map(gathered_latents)) # N, K, 1
                     if self.knn_mask:
-                        mask = dist > svh.grids[d].voxel_size
+                        mask = dist > 1.5*svh.grids[d].voxel_size
                         # alpha[mask] = 0
                         alpha = torch.where(mask.unsqueeze(-1), torch.zeros_like(alpha), alpha)
                 gathered_centers = coords[indx] #N, K, 3

@@ -12,6 +12,7 @@ This file is part of the Zeus deep learning library.
 """
 
 import nksr
+import time
 import torch
 import open3d as o3d
 from torch.nn import functional as F
@@ -175,12 +176,14 @@ if __name__ == '__main__':
 
         """ test from reconstructor """
         # Initialize the ScanNetDataset
-        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/data/scannetv2', over_fitting=True, num_input_points=10000, std_dev=0.025)
+        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00)
         # Initialize a device
         device = torch.device("cpu")
         # Prepare to accumulate evaluation metrics
         accumulated_eval_dict = {metric: 0.0 for metric in UnitMeshEvaluator.ALL_METRICS}
         total_scenes = len(dataset)
+        # Start the timer
+        start_time = time.time()
         for data_id in tqdm(range(total_scenes), desc="Processing scenes"):
             # Get the data for the current scene
             data = dataset._get_item(data_id, np.random.default_rng())
@@ -195,7 +198,7 @@ if __name__ == '__main__':
             # Evaluate the reconstructed mesh
             evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
             eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
-            o3d.io.write_triangle_mesh("../../projects/data/Visualizations/Noisy_attention_mesh_voxel_0.02.obj", nksr_mesh)
+            # o3d.io.write_triangle_mesh("../../projects/data/Visualizations/Epoch13_ResNet_Attention-no-growing_0.02.obj", nksr_mesh)
             # Accumulate evaluation metrics
             for key in accumulated_eval_dict.keys():
                 if key in eval_dict:
@@ -203,7 +206,12 @@ if __name__ == '__main__':
                     # Print the updated value for the current key
                     print(f"{key}: {eval_dict[key]}")
 
+        # Stop the timer
+        end_time = time.time()
 
+        # Calculate the total time taken
+        total_time = end_time - start_time
+        print(f"Total reconstruction time for all scenes: {total_time:.2f} seconds")
         # Compute the average evaluation metrics
         average_eval_dict = {key: value / total_scenes for key, value in accumulated_eval_dict.items()}
         print("Average Evaluation Metrics:", average_eval_dict)

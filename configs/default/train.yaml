@@ -10,7 +10,7 @@ feature: 'normal'
 geometry: 'neural'
 decoder:
   interpolation: 'attention' # trilinear or attention
-  n_blocks: 2
+  n_blocks: 1
   aggregation: 'cat' # cat or sum
   alpha: true
   knn_mask: true
@@ -26,7 +26,7 @@ unet:
   f_maps: 32
 
 udf:
-  enabled: false
+  enabled: true
 
 interpolator:
   n_hidden: 2
