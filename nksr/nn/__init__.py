@@ -9,4 +9,4 @@
 
 from .modules import Conv3d, GroupNorm, Activation, GroupNorm, MaxPooling, Upsampling, SparseZeroPadding
 from .unet import SparseStructureNet, NoGrowSparseStructureNet
-from .encdec import PointEncoder, MultiscalePointDecoder, AttentionMultiscalePointDecoder
+from .encdec import PointEncoder, MultiscalePointDecoder, AttentionMultiscalePointDecoder, NKSRAttentionMultiscalePointDecoder

@@ -14,6 +14,8 @@
             "args": [
                 "configs/scannet/train.yaml",
                 // "--ckpt",
+                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Fourier-PosEnc_Analytic-normal_Attention_ResMLP_1.5Mask_Alpha_Cat_No-growing_theia_epoch=05-val_loss=83.80.ckpt"
+                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Correct_Fourier-PosEnc_Analytic-normal_Attention_LinearScore_1.5Mask_Alpha_Cat_No-growing_theia_epoch=10-val_loss=90.39.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Analytic-normal_Attention_ResMLP_1.5Mask_Alpha_Cat_No-growing_theia_epoch=13-val_loss=84.96.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Voxel-0.02_NeuralDecoder_No-growing_All-losses_epoch=85-val_loss=64.86.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=09-val_loss=119.95.ckpt",

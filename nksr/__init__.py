@@ -16,7 +16,7 @@ from typing import List, Union, Mapping, Optional, Callable
 from pathlib import Path
 from nksr.configs import get_hparams, load_checkpoint_from_url
 from nksr.nn.unet import SparseStructureNet, NoGrowSparseStructureNet
-from nksr.nn.encdec import PointEncoder, MultiscalePointDecoder, AttentionMultiscalePointDecoder
+from nksr.nn.encdec import PointEncoder, MultiscalePointDecoder, AttentionMultiscalePointDecoder, NKSRAttentionMultiscalePointDecoder
 from nksr.interpolator import MLPFeatureInterpolator
 from nksr.svh import SparseFeatureHierarchy
 from nksr.fields import KernelField, NeuralField, FusedField, LayerField
@@ -59,8 +59,19 @@ class NKSRNetwork(torch.nn.Module):
                     multiscale_depths=self.hparams.tree_depth,
                     coords_depths=[2, 3]
                 )
-            else:
+            elif self.hparams.decoder.interpolation == 'attention':
                 self.sdf_decoder = AttentionMultiscalePointDecoder(
+                    c_each_dim=self.hparams.kernel_dim,
+                    multiscale_depths=self.hparams.tree_depth,
+                    n_blocks=self.hparams.decoder.n_blocks,
+                    aggregation=self.hparams.decoder.aggregation,
+                    coords_depths=[2, 3],
+                    alpha=self.hparams.decoder.alpha,
+                    knn_mask = self.hparams.decoder.knn_mask,
+                    neighbor_level_mlp=self.hparams.decoder.neighbor_level_mlp,
+                )
+            else:
+                self.sdf_decoder = NKSRAttentionMultiscalePointDecoder(
                     c_each_dim=self.hparams.kernel_dim,
                     multiscale_depths=self.hparams.tree_depth,
                     n_blocks=self.hparams.decoder.n_blocks,

@@ -9,8 +9,8 @@ model: nksr_net
 feature: 'normal'
 geometry: 'neural'
 decoder:
-  interpolation: 'attention' # trilinear or attention
-  n_blocks: 1
+  interpolation: 'nksr_attention' # trilinear or attention or nksr_attention
+  n_blocks: 2
   aggregation: 'cat' # cat or sum
   alpha: true
   knn_mask: true

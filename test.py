@@ -176,7 +176,7 @@ if __name__ == '__main__':
 
         """ test from reconstructor """
         # Initialize the ScanNetDataset
-        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00)
+        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/data/scannetv2', over_fitting=True, num_input_points=10000, std_dev=0.00)
         # Initialize a device
         device = torch.device("cpu")
         # Prepare to accumulate evaluation metrics
@@ -198,7 +198,7 @@ if __name__ == '__main__':
             # Evaluate the reconstructed mesh
             evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
             eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
-            # o3d.io.write_triangle_mesh("../../projects/data/Visualizations/Epoch13_ResNet_Attention-no-growing_0.02.obj", nksr_mesh)
+            o3d.io.write_triangle_mesh("../../projects/data/Visualizations/Correct_Fourier_Epoch10_ResNet_Attention-no-growing_0.02.obj", nksr_mesh)
             # Accumulate evaluation metrics
             for key in accumulated_eval_dict.keys():
                 if key in eval_dict:
