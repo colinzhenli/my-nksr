@@ -13,21 +13,26 @@
             "justMyCode": false,
             "args": [
                 "configs/scannet/train.yaml",
-                // "--ckpt",
+                "--ckpt",
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/ueudqezr/checkpoints/epoch=08-val_loss=86.99.ckpt"
+                "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/jbbsmgna/checkpoints/epoch=12-val_loss=80.67.ckpt" 
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/qnoy1mnc/checkpoints/epoch=21-val_loss=61.61.ckpt"
+                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/NKSR-Attention_Fourier_Enc-interpolated-hidden-15-16-32_Alpha_Cat_theia_epoch=17-val_loss=80.38.ckpt"
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/checkpoints/NKSR-Attention_Fourier_Enc-interpolated-hidden-33-16-32_Alpha_Cat_theia_epoch=18-val_loss=75.85.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Fourier-PosEnc_Analytic-normal_Attention_ResMLP_1.5Mask_Alpha_Cat_No-growing_theia_epoch=05-val_loss=83.80.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Correct_Fourier-PosEnc_Analytic-normal_Attention_LinearScore_1.5Mask_Alpha_Cat_No-growing_theia_epoch=10-val_loss=90.39.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Analytic-normal_Attention_ResMLP_1.5Mask_Alpha_Cat_No-growing_theia_epoch=13-val_loss=84.96.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Voxel-0.02_NeuralDecoder_No-growing_All-losses_epoch=85-val_loss=64.86.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=09-val_loss=119.95.ckpt",
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/neural-decoder_all-losses_epoch=90-val_loss=83.53.ckpt",
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Trilinear_No-growing_epoch=91-val_loss=64.08.ckpt"
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/checkpoints/Trilinear_No-growing_epoch=91-val_loss=64.08.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Analytic-normal_UDF-loss_Attention_All-Samples_1.5Mask_alpha_Cat_No-growing_theia_epoch=18-val_loss=83.19.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/All-Samples_1.5Mask_Alpha_Cat_Voxel-0.02_Attention-Decoder_No-growing_theia_epoch=23-val_loss=64.50.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Voxel-0.02_AttentionDecoder_No-growing_No-UDF-losses_epoch=35-val_loss=67.56.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Analytic-normal_UDF-loss_Attention_All-Samples_1.5Mask_alpha_Cat_No-growing_theia_epoch=13-val_loss=90.20.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/neural-decoder_only-l1_epoch=07-val_loss=42.38.ckpt", 
                 // normal inputs 
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=08-val_loss=80.75.ckpt", 
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/checkpoints/epoch=08-val_loss=80.75.ckpt", 
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/All-Samples_1.5Mask_Alpha_Cat_Voxel-0.02_Attention-Decoder_No-growing_theia_epoch=11-val_loss=73.47.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/attention-decoder_all-losses_epoch=03-val_loss=228.80.ckpt",         
                 // "--include",

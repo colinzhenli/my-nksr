@@ -7,9 +7,9 @@ model: nksr_net
 # -- Model parameters --
 
 feature: 'normal'
-geometry: 'neural'
+geometry: 'kernel'
 decoder:
-  interpolation: 'nksr_attention' # trilinear or attention or nksr_attention
+  interpolation: 'trilinear' # trilinear or attention or nksr_attention
   n_blocks: 2
   aggregation: 'cat' # cat or sum
   alpha: true
@@ -54,7 +54,7 @@ adaptive_policy:
   method: "normal"
   tau: 0.1
 
-no_voxel_growing: true
+no_voxel_growing: false
 
 supervision:
   only_l1_sdf_loss: false

@@ -176,14 +176,16 @@ if __name__ == '__main__':
 
         """ test from reconstructor """
         # Initialize the ScanNetDataset
-        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/data/scannetv2', over_fitting=True, num_input_points=10000, std_dev=0.00)
+        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00)
         # Initialize a device
-        device = torch.device("cpu")
+        device = torch.device("cuda")
         # Prepare to accumulate evaluation metrics
         accumulated_eval_dict = {metric: 0.0 for metric in UnitMeshEvaluator.ALL_METRICS}
         total_scenes = len(dataset)
         # Start the timer
         start_time = time.time()
+        total_reconstruction_duration = 0.0
+        total_forward_duration = 0.0
         for data_id in tqdm(range(total_scenes), desc="Processing scenes"):
             # Get the data for the current scene
             data = dataset._get_item(data_id, np.random.default_rng())
@@ -191,15 +193,25 @@ if __name__ == '__main__':
             sparse_input_xyz = torch.from_numpy(data['partial_input']).float().to(device)
             sparse_input_normal = torch.from_numpy(data['partial_normal']).float().to(device)
             # Reconstruct the scene
+            process_start = time.time()
+            forward_start = time.time()
             reconstructor = nksr.Reconstructor(net_model.network, device)
             field = reconstructor.reconstruct(sparse_input_xyz, sparse_input_normal, voxel_size=0.02)
+            forward_end = time.time()
             mesh_res = field.extract_dual_mesh(mise_iter=0)
             nksr_mesh = vis.mesh(mesh_res.v, mesh_res.f)
+            # Calculate time taken for these three steps
+            process_end = time.time()
+            total_forward_duration += forward_end - forward_start
+            process_duration = process_end - process_start
+            total_reconstruction_duration += process_duration  # Accumulate the duration
+            print(f"Time taken for the forward pass: {total_forward_duration:.2f} seconds")
+            print(f"Time taken for the reconstruction process: {total_reconstruction_duration:.2f} seconds")
             # Evaluate the reconstructed mesh
             evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
             eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
-            o3d.io.write_triangle_mesh("../../projects/data/Visualizations/Correct_Fourier_Epoch10_ResNet_Attention-no-growing_0.02.obj", nksr_mesh)
-            # Accumulate evaluation metrics
+            # o3d.io.write_triangle_mesh("../../theia1_data/Visualizations/DMC_visualizations/NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
+            # # Accumulate evaluation metrics
             for key in accumulated_eval_dict.keys():
                 if key in eval_dict:
                     accumulated_eval_dict[key] += eval_dict[key]

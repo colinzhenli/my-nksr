@@ -403,8 +403,8 @@ class CoordsEncoder(nn.Module):
         self,
         input_dims: int = 3,
         include_input: bool = True,
-        max_freq_log2: int = 1, # default 9
-        num_freqs: int = 2, # default 10
+        max_freq_log2: int = 4, # default 9
+        num_freqs: int = 5, # default 10
         log_sampling: bool = True,
         periodic_fns: Tuple[Callable, Callable] = (torch.sin, torch.cos)
     ) -> None:
@@ -640,6 +640,7 @@ class NKSRAttentionMultiscalePointDecoder(nn.Module):
         self.k_neighbors = 8
         self.coords_enc = CoordsEncoder(p_dim)  
         self.enc_dim = self.coords_enc.out_dim 
+        # self.c_dim = c_dim
         self.c_each_dim = c_each_dim
         self.n_blocks = n_blocks
         self.multiscale_depths = multiscale_depths

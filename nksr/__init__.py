@@ -113,6 +113,13 @@ class NKSRNetwork(torch.nn.Module):
                 coords_depths=[2, 3]
             )
 
+    def print_params_size(self):
+        for name in ['unet', 'encoder', 'sdf_decoder', 'interpolators', 'udf_decoder']:
+            module = getattr(self, name, None)
+            if module is not None:
+                total_params = sum(p.numel() for p in module.parameters())
+                print(f"{name}: {total_params} parameters")
+
 
 def default_preprocess(xyz: torch.Tensor, normal: torch.Tensor, sensor: torch.Tensor):
     return xyz, normal, sensor

@@ -1,7 +1,7 @@
 include_configs:
   - data.yaml
 
-name: 'scannet/NKSR-Attention_Fourier_Enc-interpolated-hidden-15-16-32_Alpha_Cat'
+name: 'scannet/NKSR-kernel-solver_With-growing'
 
 adaptive_depth: 2
 

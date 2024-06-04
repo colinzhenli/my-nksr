@@ -37,6 +37,7 @@ class Model(BaseModel):
     def __init__(self, hparams):
         super().__init__(hparams)
         self.network = NKSRNetwork(self.hparams)
+        self.network.print_params_size()
         if self.hparams.url:
             ckpt_data = load_checkpoint_from_url(self.hparams.url)
             self.network.load_state_dict(ckpt_data['state_dict'])

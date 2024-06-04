@@ -9,7 +9,7 @@ train_val_num_workers: 4
 over_fit: false
 
 train_kwargs:
-  base_path: "../../data/scannetv2"
+  base_path: "../../theia2_data/scannetv2"
   over_fitting: ${over_fit}
   num_input_points: 10000
   std_dev: 0.0
@@ -20,7 +20,7 @@ train_kwargs:
 
 val_dataset: ScanNetDataset
 val_kwargs:
-  base_path: "../../data/scannetv2"
+  base_path: "../../theia2_data/scannetv2"
   over_fitting: ${over_fit}
   num_input_points: 10000
   std_dev: 0.0
@@ -32,7 +32,7 @@ val_kwargs:
 test_dataset: ScanNetDataset
 test_num_workers: 4
 test_kwargs:
-  base_path: "../../data/scannetv2"
+  base_path: "../../theia2_data/scannetv2"
   over_fitting: ${over_fit}
   num_input_points: 10000
   std_dev: 0.0

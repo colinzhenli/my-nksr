@@ -18,13 +18,13 @@ __configs__ = {
     'ks': {
         'url': 'https://nksr.huangjh.tech/ks.pth',
         'feature': 'normal',
-        'geometry': 'neural',
+        'geometry': 'kernel',
         'voxel_size': 0.02,
         'kernel_dim': 4,
         'tree_depth': 4,
         'adaptive_depth': 2,
         'unet': {
-            'f_maps': 32
+            'f_maps': 16
         },
         'udf': {
             'enabled': True

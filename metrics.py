@@ -95,9 +95,10 @@ def sample_and_normalize_pointclouds(pointcloud, pointcloud_tgt, num_samples=100
 
     sampled_pointcloud_tgt, scale, translate = normalize_pointcloud_to_unit_cube(sampled_pointcloud_tgt)
     # sampled_pointcloud, _, _= normalize_pointcloud_to_unit_cube(sampled_pointcloud)
+    untransfered_sampled_pointcloud = sampled_pointcloud
     sampled_pointcloud =  (sampled_pointcloud + translate) * scale
 
-    return sampled_pointcloud, sampled_pointcloud_tgt, translate, scale
+    return untransfered_sampled_pointcloud, sampled_pointcloud, sampled_pointcloud_tgt, translate, scale
 
 class MeshEvaluator:
 
@@ -246,7 +247,7 @@ class MeshEvaluator:
         return {
             k: out_dict[k] for k in self.metric_names
         }
-
+    
 class UnitMeshEvaluator:
 
     ESSENTIAL_METRICS = [
@@ -390,6 +391,32 @@ class UnitMeshEvaluator:
         }
 
         return out_dict, translate, scale
+    
+    def jet_colormap(self, x):
+        # Create an empty RGB array
+        color = np.zeros(3)
+        # Red channel
+        color[0] = np.clip(1.5 - abs(4 * x - 3), 0, 1)
+        # Green channel
+        color[1] = np.clip(1.5 - abs(4 * x - 2), 0, 1)
+        # Blue channel
+        color[2] = np.clip(1.5 - abs(4 * x - 1), 0, 1)
+        return color
+    
+    def visualize_errors(self, pointcloud, errors):
+        # Normalize errors
+        # min_error = np.min(errors)
+        # max_error = np.max(errors)
+        min_error = 4.2665465473839186e-05
+        max_error = 0.025147336344805104
+        normalized_errors = (errors - min_error) / (max_error - min_error)
+        colors = np.array([self.jet_colormap(e) for e in normalized_errors])
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(pointcloud)
+        pcd.colors = o3d.utility.Vector3dVector(colors)
+        # Visualize the pointcloud
+        point_cloud_file = f"../../theia1_data/Visualizations/DMC_visualizations/NKSR_baseline_Accuracy_errors.ply"
+        o3d.io.write_point_cloud(point_cloud_file, pcd)    
 
     def _evaluate(self, pointcloud, pointcloud_tgt, normals=None, normals_tgt=None, onet_samples=None, mesh=None):
         """
@@ -407,7 +434,7 @@ class UnitMeshEvaluator:
 
         # Completeness: how far are the points of the target point cloud
         # from thre predicted point cloud
-        pointcloud, pointcloud_tgt, translation, scale = sample_and_normalize_pointclouds(pointcloud, pointcloud_tgt)
+        untransfered_pointcloud, pointcloud, pointcloud_tgt, translation, scale = sample_and_normalize_pointclouds(pointcloud, pointcloud_tgt)
 
         completeness, completeness_normals = distance_p2p(
             pointcloud_tgt, normals_tgt, pointcloud, normals
@@ -424,6 +451,8 @@ class UnitMeshEvaluator:
         accuracy, accuracy_normals = distance_p2p(
             pointcloud, normals, pointcloud_tgt, normals_tgt
         )
+
+        # self.visualize_errors(untransfered_pointcloud, accuracy)
         precision = get_threshold_percentage(accuracy, self.thresholds)
         accuracy2 = accuracy ** 2
 

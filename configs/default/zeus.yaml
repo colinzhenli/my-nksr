@@ -2,10 +2,10 @@
 wandb:
   user: "koala_penguin"
   # Wandb checkpoint base directory
-  base: "../data/output/Scannet/NKSR"
+  base: "../theia2_data/output/NKSR/Carla"
   # Optional upload path
   upload: "<REMOTE>:<PATH>"
-  wname: debug
+  wname: "Carla-Original-dim"
 
 # Specify this if you want to use tensorboard
 tb:
