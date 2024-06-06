@@ -1,7 +1,7 @@
 include_configs:
   - data.yaml
 
-name: 'carla/full'
+name: 'carla/Voxel-0.1_Original-size_NKSR-kernel-solver_With-growing'
 
 adaptive_depth: 2
 

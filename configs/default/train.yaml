@@ -23,7 +23,7 @@ tree_depth: 4
 adaptive_depth: 1
 
 unet:
-  f_maps: 32
+  f_maps: 8
 
 udf:
   enabled: true

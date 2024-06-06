@@ -15,6 +15,7 @@ from nksr.svh import SparseFeatureHierarchy
 from nksr.meshing import MarchingCubes
 from nksr.ext import meshing
 from nksr import utils
+from sklearn.neighbors import NearestNeighbors
 
 
 class EvaluationResult:
@@ -179,7 +180,7 @@ class BaseField(ABC):
         return dmc_vertices
         
     def extract_dual_mesh(self, mise_iter: int = 0, grid_upsample: int = 1,
-                          max_depth: int = 100, trim: bool = True, max_points: int = -1):
+                          max_depth: int = 100, trim: bool = True, max_points: int = -1, input_xyz:torch.Tensor = None, gt_xyz: np.ndarray = None):
         """
 
         Args:
@@ -189,11 +190,13 @@ class BaseField(ABC):
             max_depth:
             trim:
             max_points:
+            gt_xyz: ground truth xyz for mask
 
         Returns:
 
         """
         flattened_grids = []
+        self.gt_mask = False
         for d in range(min(self.svh.depth, max_depth + 1)):
             f_grid = meshing.build_flattened_grid(
                 self.svh.grids[d]._grid,
@@ -203,6 +206,7 @@ class BaseField(ABC):
             if grid_upsample > 1:
                 f_grid = f_grid.subdivided_grid(grid_upsample)
             flattened_grids.append(f_grid)
+
         dual_grid = meshing.build_joint_dual_grid(flattened_grids)
         dmc_graph = meshing.dual_cube_graph(flattened_grids, dual_grid)
         dmc_vertices = torch.cat([
@@ -229,7 +233,14 @@ class BaseField(ABC):
         dual_v, dual_f = MarchingCubes().apply(dmc_graph, dmc_vertices, dmc_value)
 
         if self.mask_field is not None and trim:
-            vert_mask = self.mask_field.evaluate_f_bar(dual_v, max_points=max_points) < 0.0
+            if self.gt_mask:
+                nn = NearestNeighbors(n_neighbors=1)
+                nn.fit(gt_xyz)  # coords is an (N, 3) array
+                dist, indx = nn.kneighbors(dual_v.detach().cpu().numpy())  # xyz is an (M, 3) array
+                dist = torch.from_numpy(dist).to(dual_v.device).squeeze(-1)
+                vert_mask = dist < 0.1
+            else:
+                vert_mask = self.mask_field.evaluate_f_bar(dual_v, max_points=max_points) < 0.0
             dual_v, dual_f = utils.apply_vertex_mask(dual_v, dual_f, vert_mask)
 
         if self.texture_field is not None:

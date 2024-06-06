@@ -2,7 +2,7 @@
 # ScanNet Configs
 _scannet_transforms:
   - name: "PointcloudNoise"
-    args: { "stddev": 0.00 }
+    args: { "stddev": 0.025 }
 
 train_dataset: ScanNetDataset
 train_val_num_workers: 4
@@ -12,7 +12,7 @@ train_kwargs:
   base_path: "../../theia2_data/scannetv2"
   over_fitting: ${over_fit}
   num_input_points: 10000
-  std_dev: 0.0
+  std_dev: 0.00
   dataset_name: "train"
   transforms: ${_scannet_transforms}
   split: "train"
@@ -23,7 +23,7 @@ val_kwargs:
   base_path: "../../theia2_data/scannetv2"
   over_fitting: ${over_fit}
   num_input_points: 10000
-  std_dev: 0.0
+  std_dev: 0.00
   transforms: ${_scannet_transforms}
   custom_name: "scannet"
   split: "val"
@@ -35,7 +35,7 @@ test_kwargs:
   base_path: "../../theia2_data/scannetv2"
   over_fitting: ${over_fit}
   num_input_points: 10000
-  std_dev: 0.0
+  std_dev: 0.00
   transforms: ${_scannet_transforms}
   split: "val"
   custom_name: "scannet"

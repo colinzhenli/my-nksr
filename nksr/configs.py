@@ -24,7 +24,7 @@ __configs__ = {
         'tree_depth': 4,
         'adaptive_depth': 2,
         'unet': {
-            'f_maps': 16
+            'f_maps': 8
         },
         'udf': {
             'enabled': True

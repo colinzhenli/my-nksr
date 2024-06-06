@@ -408,7 +408,7 @@ class Model(BaseModel):
             test_transform = ScaledIsometry.from_matrix(np.array(self.hparams.test_transform))
             test_inv_transform = test_transform.inv()
 
-        self.log('source', batch[DS.SCENE_NAME][0])
+        self.log('source', batch[DS.SHAPE_NAME][0])
 
         out = {'idx': batch_idx}
         self.transform_batch_input(batch, test_transform)
@@ -423,16 +423,10 @@ class Model(BaseModel):
         # self.log_dict(metric_dict)
 
         field = out['field']
-
         mesh_res = field.extract_dual_mesh(grid_upsample=self.hparams.test_n_upsample)
-        dmc_vertices = field.extract_dmc_vertices(grid_upsample=self.hparams.test_n_upsample)
-
-        """ dense pointcloud """
-        # torch.set_grad_enabled(True)
-        # dense_pointcloud = self.generate_point_cloud(field, batch[DS.INPUT_PC][0], dmc_vertices)
-        # torch.set_grad_enabled(False)
-
         mesh = vis.mesh(mesh_res.v, mesh_res.f)
+        o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Carla.obj", mesh)
+
         """ naive marching cube mesh """
         # mesh = self.reconstruct_mesh(field, batch[DS.INPUT_PC][0])
         self.transform_batch_input(batch, test_inv_transform)

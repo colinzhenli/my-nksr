@@ -5,7 +5,7 @@ wandb:
   base: "../theia2_data/output/NKSR/Carla"
   # Optional upload path
   upload: "<REMOTE>:<PATH>"
-  wname: "Carla-Original-dim"
+  wname: "run_1"
 
 # Specify this if you want to use tensorboard
 tb:

@@ -13,6 +13,7 @@ This file is part of the Zeus deep learning library.
 
 import nksr
 import time
+import json
 import torch
 import open3d as o3d
 from torch.nn import functional as F
@@ -119,6 +120,13 @@ def load_scannet_example():
     # return scannet_geom
     return scene
 
+def convert_non_serializable(obj):
+    if isinstance(obj, np.float32):
+        return float(obj)
+    if isinstance(obj, np.int32):
+        return int(obj)
+    raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
+    
 if __name__ == '__main__':
     pl.seed_everything(0)
 
@@ -173,67 +181,95 @@ if __name__ == '__main__':
         else:
             net_model = net_module(args)
         net_model.overfit_logger = zeus.OverfitLoggerNull()
+        
+        Trainer_test = False
+        if Trainer_test:
+            with exp.pt_profile_named("trainer.test", "test.json"):
+                test_result = trainer.test(net_model)
 
-        """ test from reconstructor """
-        # Initialize the ScanNetDataset
-        dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00)
-        # Initialize a device
-        device = torch.device("cuda")
-        # Prepare to accumulate evaluation metrics
-        accumulated_eval_dict = {metric: 0.0 for metric in UnitMeshEvaluator.ALL_METRICS}
-        total_scenes = len(dataset)
-        # Start the timer
-        start_time = time.time()
-        total_reconstruction_duration = 0.0
-        total_forward_duration = 0.0
-        for data_id in tqdm(range(total_scenes), desc="Processing scenes"):
-            # Get the data for the current scene
-            data = dataset._get_item(data_id, np.random.default_rng())
-            # Move data to the desired device and add noise if necessary
-            sparse_input_xyz = torch.from_numpy(data['partial_input']).float().to(device)
-            sparse_input_normal = torch.from_numpy(data['partial_normal']).float().to(device)
-            # Reconstruct the scene
-            process_start = time.time()
-            forward_start = time.time()
-            reconstructor = nksr.Reconstructor(net_model.network, device)
-            field = reconstructor.reconstruct(sparse_input_xyz, sparse_input_normal, voxel_size=0.02)
-            forward_end = time.time()
-            mesh_res = field.extract_dual_mesh(mise_iter=0)
-            nksr_mesh = vis.mesh(mesh_res.v, mesh_res.f)
-            # Calculate time taken for these three steps
-            process_end = time.time()
-            total_forward_duration += forward_end - forward_start
-            process_duration = process_end - process_start
-            total_reconstruction_duration += process_duration  # Accumulate the duration
-            print(f"Time taken for the forward pass: {total_forward_duration:.2f} seconds")
-            print(f"Time taken for the reconstruction process: {total_reconstruction_duration:.2f} seconds")
-            # Evaluate the reconstructed mesh
-            evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
-            eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
-            # o3d.io.write_triangle_mesh("../../theia1_data/Visualizations/DMC_visualizations/NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
-            # # Accumulate evaluation metrics
-            for key in accumulated_eval_dict.keys():
-                if key in eval_dict:
-                    accumulated_eval_dict[key] += eval_dict[key]
-                    # Print the updated value for the current key
-                    print(f"{key}: {eval_dict[key]}")
+            # Usually, PL will output aggregated test metric from LoggerConnector (obtained from trainer.results)
+            #   However, as we patch self.log for test. We would print that ourselves.
+            net_model.print_test_logs()
 
-        # Stop the timer
-        end_time = time.time()
+        else: 
+            """ test from reconstructor """
+            # Initialize the ScanNetDataset
+            dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00)
+            # Initialize a device
+            device = torch.device("cuda")
+            net_model.network.to(device).eval().requires_grad_(False)
+            # Prepare to accumulate evaluation metrics
+            accumulated_eval_dict = {metric: 0.0 for metric in UnitMeshEvaluator.ALL_METRICS}
+            total_scenes = len(dataset)
+            # Start the timer
+            start_time = time.time()
+            total_reconstruction_duration = 0.0
+            total_forward_duration = 0.0
+            results_dict = []
+            for data_id in tqdm(range(total_scenes), desc="Processing scenes"):
+                # Get the data for the current scene
+                data = dataset._get_item(data_id, np.random.default_rng())
+                # Move data to the desired device and add noise if necessary
+                sparse_input_xyz = torch.from_numpy(data['partial_input']).float().to(device)
+                sparse_input_normal = torch.from_numpy(data['partial_normal']).float().to(device)
+                # Reconstruct the scene
+                process_start = time.time()
+                forward_start = time.time()
+                reconstructor = nksr.Reconstructor(net_model.network, device)
+                field = reconstructor.reconstruct(sparse_input_xyz, sparse_input_normal, voxel_size=0.02)
+                forward_end = time.time()
+                mesh_res = field.extract_dual_mesh(mise_iter=0, input_xyz = sparse_input_xyz, gt_xyz = data['full_input'])
+                nksr_mesh = vis.mesh(mesh_res.v, mesh_res.f)
+                # Calculate time taken for these three steps
+                process_end = time.time()
+                total_forward_duration += forward_end - forward_start
+                process_duration = process_end - process_start
+                total_reconstruction_duration += process_duration  # Accumulate the duration
+                print(f"Time taken for the forward pass: {total_forward_duration:.2f} seconds")
+                print(f"Time taken for the reconstruction process: {total_reconstruction_duration:.2f} seconds")
+                # Evaluate the reconstructed mesh
+                evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
+                eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
+                eval_dict["data_id"] = data_id
+                results_dict.append(eval_dict)
+                # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
+                # # Accumulate evaluation metrics
+                for key in accumulated_eval_dict.keys():
+                    if key in eval_dict:
+                        accumulated_eval_dict[key] += eval_dict[key]
+                        # Print the updated value for the current key
+                        print(f"{key}: {eval_dict[key]}")
+                torch.cuda.empty_cache()
+                
 
-        # Calculate the total time taken
-        total_time = end_time - start_time
-        print(f"Total reconstruction time for all scenes: {total_time:.2f} seconds")
-        # Compute the average evaluation metrics
-        average_eval_dict = {key: value / total_scenes for key, value in accumulated_eval_dict.items()}
-        print("Average Evaluation Metrics:", average_eval_dict)
+            # Stop the timer
+            end_time = time.time()
 
-        # with exp.pt_profile_named("trainer.test", "test.json"):
-        #     test_result = trainer.test(net_model)
+            # Calculate the total time taken
+            total_time = end_time - start_time
+            print(f"Total reconstruction time for all scenes: {total_time:.2f} seconds")
+            # Compute the average evaluation metrics
+            average_eval_dict = {key: value / total_scenes for key, value in accumulated_eval_dict.items()}
+            print("Average Evaluation Metrics:", average_eval_dict)
+            # Path to the file where you want to save the results
 
-        # # Usually, PL will output aggregated test metric from LoggerConnector (obtained from trainer.results)
-        # #   However, as we patch self.log for test. We would print that ourselves.
-        # net_model.print_test_logs()
+
+        # Path to the file where you want to save the results
+        file_path = 'results.txt'
+
+        # Write the dictionary to the file
+        with open(file_path, 'w') as file:
+            for item in results_dict:
+                file.write(json.dumps(item, default=convert_non_serializable) + '\n')
+
+        print(f'Results saved to {file_path}')
+
+            # with exp.pt_profile_named("trainer.test", "test.json"):
+            #     test_result = trainer.test(net_model)
+
+            # # Usually, PL will output aggregated test metric from LoggerConnector (obtained from trainer.results)
+            # #   However, as we patch self.log for test. We would print that ourselves.
+            # net_model.print_test_logs()
 
     except Exception as ex:
         if isinstance(ex, bdb.BdbQuit):

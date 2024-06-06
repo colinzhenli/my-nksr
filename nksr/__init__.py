@@ -176,7 +176,7 @@ class Reconstructor:
         self.chunk_tmp_device = self.device
         self.hparams = get_hparams(config)
         # self.network = NKSRNetwork(self.hparams).to(self.device).eval().requires_grad_(False)
-        self.network = network.to(self.device).eval().requires_grad_(False)
+        self.network = network
         # ckpt_data = load_checkpoint_from_url(self.hparams.url)
         # self.network.load_state_dict(ckpt_data['state_dict'])
 

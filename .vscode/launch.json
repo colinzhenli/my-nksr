@@ -8,15 +8,17 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "train.py",
+            "program": "test.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
                 "configs/scannet/train.yaml",
                 "--ckpt",
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-carla/g2xmejwy/checkpoints/epoch=03-val_loss=61.33.ckpt"
+                "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/wavba4rb/checkpoints/epoch=16-val_loss=97.15.ckpt"
                 // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/ueudqezr/checkpoints/epoch=08-val_loss=86.99.ckpt"
-                "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/jbbsmgna/checkpoints/epoch=12-val_loss=80.67.ckpt" 
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/qnoy1mnc/checkpoints/epoch=21-val_loss=61.61.ckpt"
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/jbbsmgna/checkpoints/epoch=12-val_loss=80.67.ckpt" 
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/qnoy1mnc/checkpoints/epoch=59-val_loss=57.48.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/NKSR-Attention_Fourier_Enc-interpolated-hidden-15-16-32_Alpha_Cat_theia_epoch=17-val_loss=80.38.ckpt"
                 // "/localhome/zla247/theia1_data/output/NKSR/Scannet/checkpoints/NKSR-Attention_Fourier_Enc-interpolated-hidden-33-16-32_Alpha_Cat_theia_epoch=18-val_loss=75.85.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Fourier-PosEnc_Analytic-normal_Attention_ResMLP_1.5Mask_Alpha_Cat_No-growing_theia_epoch=05-val_loss=83.80.ckpt"

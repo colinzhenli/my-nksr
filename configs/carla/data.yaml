@@ -39,6 +39,6 @@ test_kwargs:
   input_path: ${_carla_input_path}
   drives: ${_carla_drives}
   transforms: ${_carla_transforms}
-  split: "test"
+  split: "val"
   custom_name: "carla"
   random_seed: "fixed"
