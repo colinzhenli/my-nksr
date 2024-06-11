@@ -23,7 +23,7 @@ tree_depth: 4
 adaptive_depth: 1
 
 unet:
-  f_maps: 8
+  f_maps: 32
 
 udf:
   enabled: true
@@ -54,7 +54,7 @@ adaptive_policy:
   method: "normal"
   tau: 0.1
 
-no_voxel_growing: false
+no_voxel_growing: False
 
 supervision:
   only_l1_sdf_loss: false

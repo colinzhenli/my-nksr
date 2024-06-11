@@ -5,6 +5,7 @@ from .combined import CombinedDataset
 from .points2surf import Points2SurfDataset
 from .matterport import MatterportDataset
 from .scannet import ScanNetDataset
+from .synthetic import SyntheticRoomDataset
 
 
 def build_dataset(name: str, spec, hparams, kwargs: dict):
