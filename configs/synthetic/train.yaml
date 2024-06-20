@@ -1,7 +1,7 @@
 include_configs:
   - data.yaml
 
-name: 'scannet/NKSR-kernel-solver_With-growing'
+name: 'synthetic/NKSR-kernel-solver_With-growing'
 
 adaptive_depth: 2
 

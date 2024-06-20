@@ -194,7 +194,7 @@ if __name__ == '__main__':
         else: 
             """ test from reconstructor """
             # Initialize the ScanNetDataset
-            dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00)
+            dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=True, num_input_points=10000, std_dev=0.00)
             # Initialize a device
             device = torch.device("cuda")
             net_model.network.to(device).eval().requires_grad_(False)
@@ -232,7 +232,7 @@ if __name__ == '__main__':
                 eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
                 eval_dict["data_id"] = data_id
                 results_dict.append(eval_dict)
-                # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
+                o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
                 # # Accumulate evaluation metrics
                 for key in accumulated_eval_dict.keys():
                     if key in eval_dict:
@@ -254,15 +254,15 @@ if __name__ == '__main__':
             # Path to the file where you want to save the results
 
 
-        # Path to the file where you want to save the results
-        file_path = 'results.txt'
+            # Path to the file where you want to save the results
+            file_path = 'results.txt'
 
-        # Write the dictionary to the file
-        with open(file_path, 'w') as file:
-            for item in results_dict:
-                file.write(json.dumps(item, default=convert_non_serializable) + '\n')
+            # Write the dictionary to the file
+            with open(file_path, 'w') as file:
+                for item in results_dict:
+                    file.write(json.dumps(item, default=convert_non_serializable) + '\n')
 
-        print(f'Results saved to {file_path}')
+            print(f'Results saved to {file_path}')
 
             # with exp.pt_profile_named("trainer.test", "test.json"):
             #     test_result = trainer.test(net_model)

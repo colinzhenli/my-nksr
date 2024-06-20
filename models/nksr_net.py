@@ -408,7 +408,7 @@ class Model(BaseModel):
             test_transform = ScaledIsometry.from_matrix(np.array(self.hparams.test_transform))
             test_inv_transform = test_transform.inv()
 
-        self.log('source', batch[DS.SHAPE_NAME][0])
+        # self.log('source', batch[DS.SHAPE_NAME][0])
 
         out = {'idx': batch_idx}
         self.transform_batch_input(batch, test_transform)
@@ -425,7 +425,7 @@ class Model(BaseModel):
         field = out['field']
         mesh_res = field.extract_dual_mesh(grid_upsample=self.hparams.test_n_upsample)
         mesh = vis.mesh(mesh_res.v, mesh_res.f)
-        o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Carla.obj", mesh)
+        # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Carla.obj", mesh)
 
         """ naive marching cube mesh """
         # mesh = self.reconstruct_mesh(field, batch[DS.INPUT_PC][0])
@@ -479,7 +479,8 @@ class Model(BaseModel):
             # # our_eval_dict = evaluator.eval_mesh(our_mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
             # # print(our_eval_dict)
 
-            # o3d.io.write_triangle_mesh("../data/Visualizations/No-growing_neuraldecoder_all-losses_normal_voxel_0.02.obj", mesh)
+            o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", mesh)
+
 
         input_pc = batch[DS.INPUT_PC][0]
 

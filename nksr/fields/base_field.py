@@ -238,7 +238,7 @@ class BaseField(ABC):
                 nn.fit(gt_xyz)  # coords is an (N, 3) array
                 dist, indx = nn.kneighbors(dual_v.detach().cpu().numpy())  # xyz is an (M, 3) array
                 dist = torch.from_numpy(dist).to(dual_v.device).squeeze(-1)
-                vert_mask = dist < 0.1
+                vert_mask = dist < 0.04
             else:
                 vert_mask = self.mask_field.evaluate_f_bar(dual_v, max_points=max_points) < 0.0
             dual_v, dual_f = utils.apply_vertex_mask(dual_v, dual_f, vert_mask)

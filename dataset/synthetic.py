@@ -17,7 +17,7 @@ class SyntheticRoomDataset(RandomSafeDataset):
             super().__init__(0, True, skip_on_error)
         else:
             super().__init__(random_seed, False, skip_on_error)
-        self.scale = 2 # Emperical scale to transfer back to physical scale
+        self.scale = 2.2 # Emperical scale to transfer back to physical scale
         self.skip_on_error = skip_on_error
         self.custom_name = custom_name
         self.dataset_folder = kwargs.get("base_path", None)
@@ -119,6 +119,13 @@ class SyntheticRoomDataset(RandomSafeDataset):
             normals = normals.astype(np.float32)
             points += 1e-4 * np.random.randn(*points.shape)
             normals += 1e-4 * np.random.randn(*normals.shape)
+
+
+        # Flip the y and z axes for points and normals and move to positive quadrant
+        points = points[:, [0, 2, 1]]
+        normals = normals[:, [0, 2, 1]]
+        min_values = np.min(points, axis=0)
+        points -= min_values
 
         return {'xyz': points, 'normal': normals, 'semantics': semantics}
 
