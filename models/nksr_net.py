@@ -423,9 +423,9 @@ class Model(BaseModel):
         # self.log_dict(metric_dict)
 
         field = out['field']
-        mesh_res = field.extract_dual_mesh(grid_upsample=self.hparams.test_n_upsample)
+        mesh_res = field.extract_dual_mesh(grid_upsample=self.hparams.test_n_upsample, input_xyz = batch[DS.INPUT_PC][0], gt_xyz = batch[DS.GT_DENSE_PC][0])
         mesh = vis.mesh(mesh_res.v, mesh_res.f)
-        # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Carla.obj", mesh)
+        o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Synthetic.obj", mesh)
 
         """ naive marching cube mesh """
         # mesh = self.reconstruct_mesh(field, batch[DS.INPUT_PC][0])

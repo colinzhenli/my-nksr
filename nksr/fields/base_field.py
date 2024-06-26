@@ -197,15 +197,34 @@ class BaseField(ABC):
         """
         flattened_grids = []
         self.gt_mask = False
-        for d in range(min(self.svh.depth, max_depth + 1)):
-            f_grid = meshing.build_flattened_grid(
-                self.svh.grids[d]._grid,
-                self.svh.grids[d - 1]._grid if d > 0 else None,
-                d != self.svh.depth - 1
+        self.mesh_res_growing = False
+        if not self.mesh_res_growing:
+            nksr_svh = SparseFeatureHierarchy(
+                voxel_size=0.02,
+                depth=self.svh.depth,
+                device= input_xyz.device
             )
-            if grid_upsample > 1:
-                f_grid = f_grid.subdivided_grid(grid_upsample)
-            flattened_grids.append(f_grid)
+            nksr_svh.build_point_splatting(input_xyz)
+            for d in range(min(nksr_svh.depth, max_depth + 1)):
+                f_grid = meshing.build_flattened_grid(
+                    nksr_svh.grids[d]._grid,
+                    nksr_svh.grids[d - 1]._grid if d > 0 else None,
+                    d != nksr_svh.depth - 1
+                )
+                if grid_upsample > 1:
+                    f_grid = f_grid.subdivided_grid(grid_upsample)
+                flattened_grids.append(f_grid)
+
+        else:
+            for d in range(min(self.svh.depth, max_depth + 1)):
+                f_grid = meshing.build_flattened_grid(
+                    self.svh.grids[d]._grid,
+                    self.svh.grids[d - 1]._grid if d > 0 else None,
+                    d != self.svh.depth - 1
+                )
+                if grid_upsample > 1:
+                    f_grid = f_grid.subdivided_grid(grid_upsample)
+                flattened_grids.append(f_grid)
 
         dual_grid = meshing.build_joint_dual_grid(flattened_grids)
         dmc_graph = meshing.dual_cube_graph(flattened_grids, dual_grid)

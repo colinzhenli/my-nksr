@@ -182,7 +182,7 @@ if __name__ == '__main__':
             net_model = net_module(args)
         net_model.overfit_logger = zeus.OverfitLoggerNull()
         
-        Trainer_test = False
+        Trainer_test = True
         if Trainer_test:
             with exp.pt_profile_named("trainer.test", "test.json"):
                 test_result = trainer.test(net_model)

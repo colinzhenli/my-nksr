@@ -2,7 +2,7 @@
 wandb:
   user: "koala_penguin"
   # Wandb checkpoint base directory
-  base: "../theia2_data/output/NKSR/Carla"
+  base: "../../theia2_data/output/NKSR/Synthetic-ScanNet"
   # Optional upload path
   upload: "<REMOTE>:<PATH>"
   wname: "run_1"

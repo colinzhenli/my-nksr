@@ -8,13 +8,13 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "test.py",
+            "program": "train.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "configs/scannet/train.yaml",
-                "--ckpt",
-                "/localhome/zla247/theia1_zla247/projects/theia2_data/output/NKSR/Carla/nksr-synthetic-noise-0.005/d392jwno/checkpoints/epoch=38-val_loss=46.59.ckpt"
+                "configs/mixture/train.yaml",
+                // "--ckpt",
+                // "/localhome/zla247/theia1_zla247/projects/theia2_data/output/NKSR/Carla/nksr-synthetic-noise-0.005/d392jwno/checkpoints/epoch=38-val_loss=46.59.ckpt"
                 // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-carla/g2xmejwy/checkpoints/epoch=03-val_loss=61.33.ckpt"
                 // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/wavba4rb/checkpoints/epoch=16-val_loss=97.15.ckpt"
                 // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/ueudqezr/checkpoints/epoch=08-val_loss=86.99.ckpt"

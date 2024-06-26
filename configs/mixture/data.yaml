@@ -1,0 +1,82 @@
+include_configs:
+  - ../scannet/data.yaml
+  - ../synthetic/data.yaml
+
+# ScanNet Configs
+_scannet_transforms:
+  - name: "PointcloudNoise"
+    args: { "stddev": 0.0 }
+
+
+# Synthetic Configs
+_synthetic_transforms:
+  - name: "PointcloudNoise"
+    args: { "stddev": 0.0 }
+
+train_dataset: MixtureDataset
+train_val_num_workers: 4
+over_fit: true
+
+train_kwargs:
+  config_list:
+    - dataset: ScanNetDataset
+      kwargs:
+        base_path: "../../theia2_data/scannetv2"
+        over_fitting: ${over_fit}
+        num_input_points: 10000
+        std_dev: 0.00
+        dataset_name: "train"
+        transforms: ${_scannet_transforms}
+        split: "train"
+        random_seed: 0
+    - dataset: SyntheticRoomDataset
+      kwargs:
+        base_path: "../../theia2_data/synthetic_data/synthetic_room_dataset"
+        classes: ['rooms_04', 'rooms_05', 'rooms_06', 'rooms_07', 'rooms_08']
+        multi_files: 10
+        over_fitting: ${over_fit}
+        num_input_points: 10000
+        std_dev: 0.00
+        dataset_name: "train"
+        transforms: ${_synthetic_transforms}
+        split: "train"
+        random_seed: 0
+
+
+val_dataset: MixtureDataset
+val_kwargs:
+  config_list:
+    - dataset: ScanNetDataset
+      kwargs:
+        base_path: "../../theia2_data/scannetv2"
+        over_fitting: ${over_fit}
+        num_input_points: 10000
+        std_dev: 0.00
+        transforms: ${_scannet_transforms}
+        custom_name: "scannet"
+        split: "val"
+        random_seed: "fixed"
+    - dataset: SyntheticRoomDataset
+      kwargs:
+        base_path: "../../theia2_data/synthetic_data/synthetic_room_dataset"
+        classes: ['rooms_04', 'rooms_05', 'rooms_06', 'rooms_07', 'rooms_08']
+        multi_files: 10
+        over_fitting: ${over_fit}
+        num_input_points: 10000
+        std_dev: 0.00
+        transforms: ${_synthetic_transforms}
+        custom_name: "synthetic"
+        split: "val"
+        random_seed: "fixed"
+
+test_dataset: ScanNetDataset
+test_num_workers: 4
+test_kwargs:
+  base_path: "../../theia2_data/scannetv2"
+  over_fitting: ${over_fit}
+  num_input_points: 10000
+  std_dev: 0.00
+  transforms: ${_scannet_transforms}
+  split: "val"
+  custom_name: "scannet"
+  random_seed: "fixed"

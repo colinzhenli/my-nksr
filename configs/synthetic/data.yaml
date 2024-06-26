@@ -9,12 +9,12 @@ train_val_num_workers: 4
 over_fit: true
 
 train_kwargs:
-  base_path: "../../theia2_data/synthetic_room_dataset"
+  base_path: "../../theia2_data/synthetic_data/synthetic_room_dataset"
   classes: ['rooms_04', 'rooms_05', 'rooms_06', 'rooms_07', 'rooms_08']
   multi_files: 10
   over_fitting: ${over_fit}
   num_input_points: 10000
-  std_dev: 0.005
+  std_dev: 0.00
   dataset_name: "train"
   transforms: ${_scannet_transforms}
   split: "train"
@@ -22,7 +22,7 @@ train_kwargs:
 
 val_dataset: SyntheticRoomDataset
 val_kwargs:
-  base_path: "../../theia2_data/synthetic_room_dataset"
+  base_path: "../../theia2_data/synthetic_data/synthetic_room_dataset"
   classes: ['rooms_04', 'rooms_05', 'rooms_06', 'rooms_07', 'rooms_08']
   multi_files: 10
   over_fitting: ${over_fit}
@@ -36,7 +36,7 @@ val_kwargs:
 test_dataset: SyntheticRoomDataset
 test_num_workers: 4
 test_kwargs:
-  base_path: "../../theia2_data/synthetic_room_dataset"
+  base_path: "../../theia2_data/synthetic_data/synthetic_room_dataset"
   classes: ['rooms_04', 'rooms_05', 'rooms_06', 'rooms_07', 'rooms_08']
   multi_files: 10
   over_fitting: ${over_fit}

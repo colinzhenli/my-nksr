@@ -26,13 +26,13 @@ class SyntheticRoomDataset(RandomSafeDataset):
         categories = kwargs.get("classes", None)
         self.over_fitting = kwargs.get("over_fitting", False)
         self.intake_start = kwargs.get("intake_start", 0)
-        self.take = kwargs.get("take", 4)
+        self.take = kwargs.get("take", 1)
         self.num_input_points = kwargs.get("num_input_points", 5000)
         self.std_dev = kwargs.get("std_dev", 0.00)
         self.std_dev *= 2
 
         assert DS.GT_MESH not in spec and DS.GT_MESH_SOUP not in spec
-        self.split = 'train' if self.over_fitting else split # use only train set for overfitting
+        self.split = 'val' if self.over_fitting else split # use only train set for overfitting
         # self.split = 'val'
         self.spec = self.sanitize_specs(
             spec, [DS.SCENE_NAME, DS.INPUT_PC, DS.TARGET_NORMAL, DS.GT_DENSE_PC, DS.GT_DENSE_NORMAL])

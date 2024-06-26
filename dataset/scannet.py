@@ -26,7 +26,7 @@ class ScanNetDataset(RandomSafeDataset):
         self.std_dev = kwargs.get("std_dev", 0.00)
 
         assert DS.GT_MESH not in spec and DS.GT_MESH_SOUP not in spec
-        self.split = 'train' if self.over_fitting else split # use only train set for overfitting
+        self.split = 'val' if self.over_fitting else split # use only train set for overfitting
         # self.split = 'val'
         self.spec = self.sanitize_specs(
             spec, [DS.SCENE_NAME, DS.INPUT_PC, DS.TARGET_NORMAL, DS.GT_DENSE_PC, DS.GT_DENSE_NORMAL])
@@ -47,7 +47,8 @@ class ScanNetDataset(RandomSafeDataset):
                 self.scenes = [t.strip() for t in f.readlines()]
         
         if self.over_fitting:
-            self.scenes = self.scenes[self.intake_start:self.take+self.intake_start]
+            self.scenes = ['scene0221_00']
+            # self.scenes = self.scenes[self.intake_start:self.take+self.intake_start]
 
         # self.scenes = ['scene0221_00']
         self.hparams = hparams
