@@ -16,6 +16,7 @@ import time
 import json
 import torch
 import open3d as o3d
+from plyfile import PlyData
 from torch.nn import functional as F
 
 from pycg import vis, exp
@@ -47,6 +48,7 @@ def get_default_parser():
 class ScanNetDataset(Dataset):
     def __init__(self, split, partial_input=False, **kwargs):
         self.over_fitting = kwargs.get("over_fitting", False)
+        self.uniform_sampling = kwargs.get("uniform_sampling", False)
         self.num_input_points = kwargs.get("num_input_points", 5000)
         self.std_dev = kwargs.get("std_dev", 0.00)
 
@@ -81,7 +83,53 @@ class ScanNetDataset(Dataset):
         full_normals = full_data['normal'].astype(np.float32)
 
         if self.num_input_points != -1:
-            sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
+            if not self.uniform_sampling:
+                # Number of blocks along each axis
+                num_blocks = 2
+                total_blocks = num_blocks ** 3
+                self.common_difference = 200
+                # Calculate block sizes
+                block_sizes = (full_points.max(axis=0) - full_points.min(axis=0)) / num_blocks
+
+                # Create the number_per_block array with an arithmetic sequence
+                average_points_per_block = self.num_input_points // total_blocks
+                number_per_block = np.array([
+                    average_points_per_block + (i - total_blocks // 2) * self.common_difference
+                    for i in range(total_blocks)
+                ])
+                
+                # Adjust number_per_block to ensure the sum is self.num_input_points
+                total_points = np.sum(number_per_block)
+                difference = self.num_input_points - total_points
+                number_per_block[-1] += difference
+
+                # Sample points from each block
+                sample_indices = []
+                block_index = 0
+                total_chosen_indices = 0
+                remaining_points = 0  # Points to be added to the next block
+                for i in range(num_blocks):
+                    for j in range(num_blocks):
+                        for k in range(num_blocks):
+                            block_min = full_points.min(axis=0) + block_sizes * np.array([i, j, k])
+                            block_max = block_min + block_sizes
+                            block_mask = np.all((full_points >= block_min) & (full_points < block_max), axis=1)
+                            block_indices = np.where(block_mask)[0]
+                            num_samples = number_per_block[block_index] + remaining_points
+                            remaining_points = 0  # Reset remaining points
+                            block_index += 1
+                            if len(block_indices) > 0:
+                                chosen_indices = np.random.choice(block_indices, num_samples, replace=True)
+                                sample_indices.extend(chosen_indices)
+                                total_chosen_indices += len(chosen_indices)
+                                # print(f"Block {block_index} - Desired: {num_samples}, Actual: {len(chosen_indices)}")
+                                if len(chosen_indices) < num_samples:
+                                    remaining_points += (num_samples - len(chosen_indices))
+                            else:
+                                # print(f"Block {block_index} - No points available. Adding {num_samples} points to the next block.")
+                                remaining_points += num_samples
+            else:
+                sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
             partial_points = full_points[sample_indices]
             partial_normals = full_normals[sample_indices]
 
@@ -103,6 +151,211 @@ class ScanNetDataset(Dataset):
 
         return data
 
+class SyntheticRoomDataset(Dataset):
+    def __init__(self, split, partial_input=False, **kwargs):
+        self.over_fitting = kwargs.get("over_fitting", False)
+        self.std_dev = kwargs.get("std_dev", 0.00)
+        self.custom_name = 'Synthetic'
+        self.scale = 2.2
+
+        self.split = 'train' if self.over_fitting else split # use only train set for overfitting
+        self.dataset_folder = kwargs.get("base_path", None)
+        self.file_name = 'pointcloud'
+        self.multi_files = 10
+        categories = kwargs.get("classes", None)
+        self.over_fitting = kwargs.get("over_fitting", False)
+        self.intake_start = kwargs.get("intake_start", 0)
+        self.take = kwargs.get("take", 1)
+        self.num_input_points = kwargs.get("num_input_points", 10000)
+        self.std_dev = kwargs.get("std_dev", 0.00)
+        self.std_dev *= 2
+
+        self.split = 'val' if self.over_fitting else split # use only train set for overfitting
+        # self.split = 'val'
+        # If categories is None, use all subfolders
+        if categories is None:
+            categories = os.listdir(self.dataset_folder)
+            categories = [c for c in categories
+                          if os.path.isdir(os.path.join(self.dataset_folder, c))]
+
+        self.metadata = {
+            c: {'id': c, 'name': 'n/a'} for c in categories
+        } 
+        
+        # Set index
+        for c_idx, c in enumerate(categories):
+            self.metadata[c]['idx'] = c_idx
+
+        # Get all models
+        self.models = []
+        for c_idx, c in enumerate(categories):
+            subpath = os.path.join(self.dataset_folder, c)
+            if not os.path.isdir(subpath):
+                print('Category %s does not exist in dataset.' % c)
+
+            if split is None:
+                self.models += [
+                    {'category': c, 'model': m} for m in [d for d in os.listdir(subpath) if (os.path.isdir(os.path.join(subpath, d)) and d != '') ]
+                ]
+
+            else:
+                split_file = os.path.join(subpath, split + '.lst')
+                with open(split_file, 'r') as f:
+                    models_c = f.read().split('\n')
+                
+                if '' in models_c:
+                    models_c.remove('')
+
+                self.models += [
+                    {'category': c, 'model': m}
+                    for m in models_c
+                ]
+        
+        # overfit in one data
+        if self.over_fitting:
+            self.models = self.models[self.intake_start:self.take+self.intake_start]
+
+
+    def __len__(self):
+        return len(self.models)
+
+    def get_name(self):
+        return f"{self.custom_name}-{self.split}"
+
+    def get_short_name(self):
+        return f"{self.custom_name}"
+    
+    def load(self, model_path, idx, vol):
+        ''' Loads the data point.
+
+        Args:
+            model_path (str): path to model
+            idx (int): ID of data point
+            vol (dict): precomputed volume info
+        '''
+        if self.multi_files is None:
+            file_path = os.path.join(model_path, self.file_name)
+        else:
+            num = np.random.randint(self.multi_files)
+            file_path = os.path.join(model_path, self.file_name, '%s_%02d.npz' % (self.file_name, num))
+        
+        item_path = os.path.join(model_path, 'item_dict.npz')
+        item_dict = np.load(item_path, allow_pickle=True)
+        points_dict = np.load(file_path, allow_pickle=True)
+        points = points_dict['points'] * self.scale # roughly transfer back to physical scale
+        normals = points_dict['normals']
+        semantics = points_dict['semantics']
+        # Break symmetry if given in float16:
+        if points.dtype == np.float16:
+            points = points.astype(np.float32)
+            normals = normals.astype(np.float32)
+            points += 1e-4 * np.random.randn(*points.shape)
+            normals += 1e-4 * np.random.randn(*normals.shape)
+
+
+        # Flip the y and z axes for points and normals and move to positive quadrant
+        points = points[:, [0, 2, 1]]
+        normals = normals[:, [0, 2, 1]]
+        min_values = np.min(points, axis=0)
+        points -= min_values
+
+        return {'xyz': points, 'normal': normals, 'semantics': semantics}
+
+    def _get_item(self, data_id, rng):
+        data = {}
+        category = self.models[data_id]['category']
+        model = self.models[data_id]['model']
+        c_idx = self.metadata[category]['idx']
+
+        model_path = os.path.join(self.dataset_folder, category, model)
+        full_data = self.load(model_path, data_id, c_idx)
+        scene_name = f"{category}/{model}/{data_id}"
+
+        full_points = full_data['xyz'].astype(np.float32)
+        full_normals = full_data['normal'].astype(np.float32)
+
+        if self.num_input_points != -1:
+            sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
+            partial_points = full_points[sample_indices]
+            partial_normals = full_normals[sample_indices]
+
+        else:
+            partial_points = full_points
+            partial_normals = full_normals
+
+        if isinstance(self.std_dev, (float, int)):
+            std_dev = [self.std_dev] * 3  # Same standard deviation for x, y, z
+        noise = np.random.normal(0, self.std_dev, partial_points.shape)
+        partial_points += noise
+
+        data = {
+            "partial_input": partial_points,
+            "partial_normal": partial_normals,
+            "full_input": full_points,
+            "full_normal": full_normals
+        }
+
+        return data
+    
+class SceneNNDataset(Dataset):
+    def __init__(self, split, partial_input=False, **kwargs):
+        self.over_fitting = kwargs.get("over_fitting", False)
+        self.num_input_points = kwargs.get("num_input_points", 10000)
+        self.std_dev = kwargs.get("std_dev", 0.00)
+        self.split = 'train' if self.over_fitting else split # use only train set for overfitting
+        self.dataset_folder = Path(kwargs.get("dataset_folder", None))
+
+        self.split = 'val' if self.over_fitting else split # use only train set for overfitting
+
+        self.scenes = sorted([os.path.join(dp, f) for dp, dn, filenames in os.walk(self.dataset_folder) for f in filenames if f.endswith('.ply')])
+        if self.over_fitting:
+            self.scenes = [self.scenes[0]]
+
+
+    def __len__(self):
+        return len(self.scenes)
+
+    def _get_item(self, data_id, rng):
+        data = {}
+        scene_filename = self.scenes[data_id]
+
+        ply_data = PlyData.read(scene_filename)
+        vertex = ply_data['vertex']
+        pos = np.stack([vertex[t] for t in ('x', 'y', 'z')], axis=1)
+        nls = np.stack([vertex[t] for t in ('nx', 'ny', 'nz')], axis=1) if 'nx' in vertex and 'ny' in vertex and 'nz' in vertex else np.zeros_like(pos)
+
+        # if len(pos) > 200000:
+        #     indices = np.random.choice(len(pos), 200000, replace=False)
+        #     pos = pos[indices]
+        #     nls = nls[indices]
+        scene_name = os.path.basename(scene_filename).replace('.ply', '')
+
+
+        full_points = pos
+        full_normals = nls
+
+        if self.num_input_points != -1:
+            sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
+            partial_points = full_points[sample_indices]
+            partial_normals = full_normals[sample_indices]
+
+        else:
+            partial_points = full_points
+            partial_normals = full_normals
+
+        if isinstance(self.std_dev, (float, int)):
+            std_dev = [self.std_dev] * 3  # Same standard deviation for x, y, z
+        noise = np.random.normal(0, self.std_dev, partial_points.shape)
+        partial_points += noise
+
+        data = {
+            "partial_input": partial_points,
+            "partial_normal": partial_normals,
+            "full_input": full_points,
+            "full_normal": full_normals
+        }
+
+        return data
     
 def load_scannet_example():
     scannet_path = Path(__file__).parent.parent / "assets" / "scannet.ply"
@@ -182,7 +435,7 @@ if __name__ == '__main__':
             net_model = net_module(args)
         net_model.overfit_logger = zeus.OverfitLoggerNull()
         
-        Trainer_test = True
+        Trainer_test = False
         if Trainer_test:
             with exp.pt_profile_named("trainer.test", "test.json"):
                 test_result = trainer.test(net_model)
@@ -194,7 +447,9 @@ if __name__ == '__main__':
         else: 
             """ test from reconstructor """
             # Initialize the ScanNetDataset
-            dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=True, num_input_points=10000, std_dev=0.00)
+            dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00, uniform_sampling=False)
+            # dataset = SceneNNDataset(split='val', partial_input=True, dataset_folder='/localhome/zla247/theia2_data/scenenn_seg_76_raw/scenenn_sub_data', over_fitting=True, num_input_points=2000000, std_dev=0.00)
+            # dataset = SyntheticRoomDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia2_data/synthetic_data/synthetic_room_dataset', over_fitting=True, num_input_points=10000, std_dev=0.00)
             # Initialize a device
             device = torch.device("cuda")
             net_model.network.to(device).eval().requires_grad_(False)
@@ -205,6 +460,13 @@ if __name__ == '__main__':
             start_time = time.time()
             total_reconstruction_duration = 0.0
             total_forward_duration = 0.0
+            total_encoder_duration = 0.0
+            total_solver_duration = 0.0
+            total_evaluate_duration = 0.0
+            total_grid_duration = 0.0
+            total_dmc_duration = 0.0
+            total_sdf_error = 0.0
+            total_normal_error = 0.0
             results_dict = []
             for data_id in tqdm(range(total_scenes), desc="Processing scenes"):
                 # Get the data for the current scene
@@ -216,10 +478,21 @@ if __name__ == '__main__':
                 process_start = time.time()
                 forward_start = time.time()
                 reconstructor = nksr.Reconstructor(net_model.network, device)
-                field = reconstructor.reconstruct(sparse_input_xyz, sparse_input_normal, voxel_size=0.02)
+                field, encoder_time, solver_time  = reconstructor.reconstruct(sparse_input_xyz, sparse_input_normal, voxel_size=0.02, solver_max_iter= 2000)
                 forward_end = time.time()
-                mesh_res = field.extract_dual_mesh(mise_iter=0, input_xyz = sparse_input_xyz, gt_xyz = data['full_input'])
+                total_encoder_duration += encoder_time
+                total_solver_duration += solver_time
+                mesh_res, dmc_time, evaluate_time, grid_time = field.extract_dual_mesh(mise_iter=0, input_xyz = sparse_input_xyz, gt_xyz = data['full_input'])
+                sdf_error, normal_error = field.compute_objective_function(xyz = sparse_input_xyz, gt_normals = 
+                                                                          sparse_input_normal)
+                total_sdf_error += sdf_error
+                total_normal_error += normal_error
+                dmc_time -= time.time()
                 nksr_mesh = vis.mesh(mesh_res.v, mesh_res.f)
+                dmc_time += time.time()
+                total_evaluate_duration += evaluate_time
+                total_grid_duration += grid_time
+                total_dmc_duration += dmc_time
                 # Calculate time taken for these three steps
                 process_end = time.time()
                 total_forward_duration += forward_end - forward_start
@@ -227,19 +500,26 @@ if __name__ == '__main__':
                 total_reconstruction_duration += process_duration  # Accumulate the duration
                 print(f"Time taken for the forward pass: {total_forward_duration:.2f} seconds")
                 print(f"Time taken for the reconstruction process: {total_reconstruction_duration:.2f} seconds")
+                print(f"Time taken for the encoder: {total_encoder_duration:.2f} seconds")
+                print(f"Time taken for the solver: {total_solver_duration:.2f} seconds")
+                print(f"Time taken for the DMC: {total_dmc_duration:.2f} seconds")
+                print(f"Time taken for the evaluation: {total_evaluate_duration:.2f} seconds")
+                print(f"Time taken for the grid: {total_grid_duration:.2f} seconds")
+                print(f"Total SDF error: {total_sdf_error:.5f}")
+                print(f"Total normal error: {total_normal_error:.5f}")
                 # Evaluate the reconstructed mesh
                 evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
                 eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
                 eval_dict["data_id"] = data_id
                 results_dict.append(eval_dict)
-                o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
+                # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
                 # # Accumulate evaluation metrics
                 for key in accumulated_eval_dict.keys():
                     if key in eval_dict:
                         accumulated_eval_dict[key] += eval_dict[key]
                         # Print the updated value for the current key
                         print(f"{key}: {eval_dict[key]}")
-                torch.cuda.empty_cache()
+                # torch.cuda.empty_cache()
                 
 
             # Stop the timer

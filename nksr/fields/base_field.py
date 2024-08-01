@@ -10,12 +10,19 @@
 import torch
 from abc import ABC
 import numpy as np
+import time
 from typing import Union, Optional
 from nksr.svh import SparseFeatureHierarchy
 from nksr.meshing import MarchingCubes
 from nksr.ext import meshing
 from nksr import utils
 from sklearn.neighbors import NearestNeighbors
+# import torch
+# from nksr.svh import SparseFeatureHierarchy
+# import torch.nn.functional as F
+# import pytorch_lightning as pl
+# from pytorch3d.ops import knn_points
+# from scipy.spatial import KDTree
 
 
 class EvaluationResult:
@@ -49,6 +56,130 @@ class MeshingResult:
         self.c = c
 
 
+# class Sampler:
+#     def __init__(self, **kwargs):
+#         # Default values can be set with kwargs.get('key', default_value)
+#         self.voxel_size = kwargs.get('voxel_size')
+#         self.adaptive_policy = {
+#             'method': 'normal',
+#             'tau': 0.1,
+#             'depth': 2
+#         }
+#         self.cfg = kwargs.get('cfg')
+#         self.ref_xyz = kwargs.get('ref_xyz')
+#         self.ref_normal = kwargs.get('ref_normal')
+#         self.svh = self._build_gt_svh()
+#         self.kdtree = KDTree(self.ref_xyz.detach().cpu().numpy())
+
+#     def _build_gt_svh(self):
+#         gt_svh = SparseFeatureHierarchy(
+#             voxel_size=self.voxel_size,
+#             depth=self.cfg.svh_tree_depth,
+#             device=self.ref_xyz.device
+#         )
+#         if self.adaptive_policy['method'] == "normal":
+#             gt_svh.build_adaptive_normal_variation(
+#                 self.ref_xyz, self.ref_normal,
+#                 tau=self.adaptive_policy['tau'],
+#                 adaptive_depth=self.adaptive_policy['depth']
+#             )
+#         return gt_svh
+    
+#     def _get_svh_samples(self, svh, n_samples, expand=0, expand_top=0):
+#         """
+#         Get random samples, across all layers of the decoder hierarchy
+#         :param svh: SparseFeatureHierarchy, hierarchy of spatial features
+#         :param n_samples: int, number of total samples
+#         :param expand: int, size of expansion
+#         :param expand_top: int, size of expansion of the coarsest level.
+#         :return: (n_samples, 3) tensor of positions
+#         """
+#         base_coords, base_scales = [], []
+#         for d in range(svh.depth):
+#             if svh.grids[d] is None:
+#                 continue
+#             ijk_coords = svh.grids[d].active_grid_coords()
+#             d_expand = expand if d != svh.depth - 1 else expand_top
+#             if d_expand >= 3:
+#                 mc_offsets = torch.arange(-d_expand // 2 + 1, d_expand // 2 + 1, device=svh.device)
+#                 mc_offsets = torch.stack(torch.meshgrid(mc_offsets, mc_offsets, mc_offsets, indexing='ij'), dim=3)
+#                 mc_offsets = mc_offsets.view(-1, 3)
+#                 ijk_coords = (ijk_coords.unsqueeze(dim=1).repeat(1, mc_offsets.size(0), 1) +
+#                               mc_offsets.unsqueeze(0)).view(-1, 3)
+#                 ijk_coords = torch.unique(ijk_coords, dim=0)
+#             base_coords.append(svh.grids[d].grid_to_world(ijk_coords.float()))
+#             base_scales.append(torch.full((ijk_coords.size(0),), svh.grids[d].voxel_size, device=svh.device))
+#         base_coords, base_scales = torch.cat(base_coords), torch.cat(base_scales)
+#         local_ids = (torch.rand((n_samples,), device=svh.device) * base_coords.size(0)).long()
+#         local_coords = (torch.rand((n_samples, 3), device=svh.device) - 0.5) * base_scales[local_ids, None]
+#         query_pos = base_coords[local_ids] + local_coords
+#         return query_pos
+
+#     def _get_samples(self):
+#         all_samples = []
+#         for config in self.cfg.samplers:
+#             if config.type == "uniform":
+#                 all_samples.append(
+#                     self._get_svh_samples(self.svh, config.n_samples, config.expand, config.expand_top)
+#                 )
+#             elif config.type == "band":
+#                 band_inds = (torch.rand((config.n_samples, ), device=self.ref_xyz.device) * self.ref_xyz.size(0)).long()
+#                 eps = config.eps * self.voxel_size
+#                 band_pos = self.ref_xyz[band_inds] + \
+#                     self.ref_normal[band_inds] * torch.randn((config.n_samples, 1), device=self.ref_xyz.device) * eps
+#                 all_samples.append(band_pos)
+#             elif config.type == 'on_surface':
+#                 n_subsample = config.subsample
+#                 if 0 < n_subsample < self.ref_xyz.size(0):
+#                     ref_xyz_inds = (torch.rand((n_subsample,), device=self.ref_xyz.device) *
+#                                     self.ref_xyz.size(0)).long()
+#                 else:
+#                     ref_xyz_inds = torch.arange(self.ref_xyz.size(0), device=self.ref_xyz.device)
+#                 all_samples.append(self.ref_xyz[ref_xyz_inds])
+
+#         return torch.cat(all_samples, 0)
+
+#     def transform_field(self, field: torch.Tensor):
+#         sdf_config = self.cfg
+#         assert sdf_config.gt_type != "binary"
+#         truncation_size = sdf_config.gt_band * self.voxel_size
+#         if sdf_config.gt_soft:
+#             field = torch.tanh(field / truncation_size) * truncation_size
+#         else:
+#             field = torch.clone(field)
+#             field[field > truncation_size] = truncation_size
+#             field[field < -truncation_size] = -truncation_size
+#         return field
+
+#     # def compute_gt_chi_from_pts(self, query_pos: torch.Tensor):
+#     #     mc_query_sdf = -ext.sdfgen.sdf_from_points(query_pos, self.ref_xyz, self.ref_normal, 8, 0.02, False)[0]
+#     #     return mc_query_sdf
+
+#     def compute_gt_sdf_from_pts(self, query_pos: torch.Tensor):
+#         k = 8  
+#         stdv = 0.02
+#         # knn_output = knn_points(query_pos.unsqueeze(0), self.ref_xyz.unsqueeze(0), K)
+#         # indices = knn_output.idx.squeeze(0)
+#         normals = self.ref_normal
+#         knn_output = knn_points(query_pos.unsqueeze(0).to(torch.device("cuda")), self.ref_xyz.unsqueeze(0).to(torch.device("cuda")), K=k)
+#         indices = knn_output.idx.squeeze(0)
+#         # dists, indices = self.kdtree.query(query_pos.detach().cpu().numpy(), k=k)
+#         indices = torch.tensor(indices, device=query_pos.device)
+#         closest_points = self.ref_xyz[indices]
+#         surface_to_queries_vec = query_pos.unsqueeze(1) - closest_points #N, K, 3
+
+#         dot_products = torch.einsum("ijk,ijk->ij", surface_to_queries_vec, normals[indices]) #N, K
+#         vec_lengths = torch.norm(surface_to_queries_vec[:, 0, :], dim=-1) 
+#         use_dot_product = vec_lengths < stdv
+#         sdf = torch.where(use_dot_product, torch.abs(dot_products[:, 0]), vec_lengths)
+
+#         # Adjust the sign of the sdf values based on the majority of dot products
+#         num_pos = torch.sum(dot_products > 0, dim=1)
+#         inside = num_pos <= (k / 2)
+#         sdf[inside] *= -1
+        
+#         return -sdf
+    
 class BaseField(ABC):
     """
     Base class for the 3D continuous field:
@@ -180,7 +311,7 @@ class BaseField(ABC):
         return dmc_vertices
         
     def extract_dual_mesh(self, mise_iter: int = 0, grid_upsample: int = 1,
-                          max_depth: int = 100, trim: bool = True, max_points: int = -1, input_xyz:torch.Tensor = None, gt_xyz: np.ndarray = None):
+                          max_depth: int = 100, trim: bool = True, max_points: int = -1, input_xyz:torch.Tensor = None, gt_xyz: torch.Tensor = None):
         """
 
         Args:
@@ -195,9 +326,13 @@ class BaseField(ABC):
         Returns:
 
         """
+        dmc_time = 0.0
+        evaluate_time = 0.0
+        grid_time = 0.0
         flattened_grids = []
         self.gt_mask = False
         self.mesh_res_growing = False
+        grid_time -= time.time()
         if not self.mesh_res_growing:
             nksr_svh = SparseFeatureHierarchy(
                 voxel_size=0.02,
@@ -233,12 +368,14 @@ class BaseField(ABC):
             for f_grid in flattened_grids if f_grid.num_voxels() > 0
         ], dim=0)
         del flattened_grids, dual_grid
+        grid_time += time.time()
 
         if self.scale != 1.0:
             dmc_vertices = dmc_vertices * self.scale
 
+        evaluate_time -= time.time()
         dmc_value = self.evaluate_f_bar(dmc_vertices, max_points=max_points)
-
+        evaluate_time += time.time()
         for _ in range(mise_iter):
             cube_sign = dmc_value[dmc_graph] > 0
             cube_mask = ~torch.logical_or(torch.all(cube_sign, dim=1), torch.all(~cube_sign, dim=1))
@@ -249,22 +386,65 @@ class BaseField(ABC):
             dmc_graph, dmc_vertices = utils.subdivide_cube_indices(dmc_graph, dmc_vertices)
             dmc_value = self.evaluate_f_bar(dmc_vertices, max_points=max_points)
 
+        dmc_time -= time.time()
         dual_v, dual_f = MarchingCubes().apply(dmc_graph, dmc_vertices, dmc_value)
+        dmc_time += time.time()
 
         if self.mask_field is not None and trim:
             if self.gt_mask:
                 nn = NearestNeighbors(n_neighbors=1)
-                nn.fit(gt_xyz)  # coords is an (N, 3) array
+                nn.fit(gt_xyz.detach().cpu().numpy())  # coords is an (N, 3) array
                 dist, indx = nn.kneighbors(dual_v.detach().cpu().numpy())  # xyz is an (M, 3) array
                 dist = torch.from_numpy(dist).to(dual_v.device).squeeze(-1)
                 vert_mask = dist < 0.04
             else:
+                evaluate_time = -time.time()
                 vert_mask = self.mask_field.evaluate_f_bar(dual_v, max_points=max_points) < 0.0
+                evaluate_time += time.time()
+
+            dmc_time -= time.time()
             dual_v, dual_f = utils.apply_vertex_mask(dual_v, dual_f, vert_mask)
+            dmc_time += time.time() 
 
         if self.texture_field is not None:
             dual_c = self.texture_field.evaluate_f_bar(dual_v, max_points=max_points)
         else:
             dual_c = None
+        dmc_time -= time.time()
+        mesh_res =  MeshingResult(dual_v, dual_f, dual_c)
+        dmc_time += time.time()
 
-        return MeshingResult(dual_v, dual_f, dual_c)
+        return mesh_res, dmc_time, evaluate_time, grid_time
+    
+    def compute_objective_function(self, xyz:torch.Tensor = None, gt_normals: torch.Tensor = None):
+        self.normals = 'default' # 'Analytical' or 'Numerical' or 'default'
+        if self.normals == 'default':
+            res = self.evaluate_f(xyz, grad=True)
+            pd_sdf = res.value
+            pd_normals = res.gradient
+            pd_normals = -pd_normals / (torch.linalg.norm(pd_normals, dim=-1, keepdim=True) + 1.0e-6)
+    
+        elif self.normals == 'Analytical':
+            xyz.requires_grad = True
+            with torch.enable_grad():
+                pd_sdf, *_ = self.evaluate_f_bar(xyz, max_points=-1)
+                pd_normals = torch.autograd.grad(pd_sdf, [xyz],
+                                                    grad_outputs=torch.ones_like(pd_sdf),
+                                                    allow_unused=True)[0]
+    
+        elif self.normals == 'Numerical':
+            interval = 0.01 * 0.02
+            grad_value = []
+            for offset in [(interval, 0, 0), (0, interval, 0), (0, 0, interval)]:
+                offset_tensor = torch.tensor(offset, device=self.device)[None, :]
+                res_p = self.evaluate_f_bar(xyz + offset_tensor, max_points=-1)
+                res_n = self.evaluate_f_bar(xyz - offset_tensor, max_points=-1)
+                grad_value.append((res_p - res_n) / (2 * interval))
+            pd_normals = torch.stack(grad_value, dim=1)
+            pd_sdf = self.evaluate_f_bar(xyz, max_points=-1)
+            
+        sdf_error = torch.mean(torch.abs(pd_sdf))
+        normal_error = torch.mean(torch.norm(pd_normals - gt_normals, dim=1))
+
+        
+        return sdf_error, normal_error        

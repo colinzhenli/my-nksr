@@ -9,6 +9,7 @@
 import tqdm
 import math
 import torch
+import time
 from pycg.isometry import Isometry
 from pycg.exp import logger
 from typing import List, Union, Mapping, Optional, Callable
@@ -228,7 +229,8 @@ class Reconstructor:
         Returns:
             field (Field): the implicit field to extract mesh from.
         """
-
+        solver_time =0.0
+        encoder_time = 0.0
         if chunk_size > 0.0:
             transform_list, xyz_list, feat_list = split_into_chunks(
                 xyz, chunk_size, overlap_ratio, normal=normal, sensor=sensor)
@@ -294,11 +296,13 @@ class Reconstructor:
             device=self.device
         )
         svh.build_point_splatting(xyz)
+        encoder_time -= time.time()
         feat = self.network.encoder(xyz, feat, svh, 0)
         feat, svh, udf_svh = self.network.unet(
             feat, svh,
             adaptive_depth=self.hparams.adaptive_depth
         )
+        encoder_time += time.time()
 
         if self.hparams.geometry == 'kernel':
             output_field = KernelField(
@@ -319,6 +323,8 @@ class Reconstructor:
                 'normal_weight': normal_weight,
                 'reg_weight': 1.0
             }
+            torch.cuda.empty_cache()
+            solver_time -= time.time()
             if not fused_mode:
                 output_field.solve_non_fused(**solve_kwargs)
             else:
@@ -326,6 +332,7 @@ class Reconstructor:
                     **solve_kwargs,
                     nystrom_min_depth=nystrom_min_depth
                 )
+            solver_time += time.time()
 
         elif self.hparams.geometry == 'neural':
             output_field = NeuralField(
@@ -354,7 +361,7 @@ class Reconstructor:
         output_field.clear_svh_kernel_maps()
         output_field.set_scale(global_scale)
 
-        return output_field
+        return output_field, encoder_time, solver_time
 
     def reconstruct_by_chunk(self,
                              transform_list: List[Isometry],

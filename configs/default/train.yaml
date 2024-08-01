@@ -54,7 +54,7 @@ adaptive_policy:
   method: "normal"
   tau: 0.1
 
-no_voxel_growing: False
+no_voxel_growing: True
 
 supervision:
   only_l1_sdf_loss: false

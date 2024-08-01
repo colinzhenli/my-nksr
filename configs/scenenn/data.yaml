@@ -1,0 +1,42 @@
+
+# SceneNN Configs
+_scenenn_transforms:
+  - name: "PointcloudNoise"
+    args: { "stddev": 0.0 }
+
+train_dataset: SceneNNDataset
+train_val_num_workers: 4
+over_fit: true
+
+train_kwargs:
+  base_path: "../../theia2_data/scenenn_seg_76_raw/scenenn_sub_data"
+  over_fitting: ${over_fit}
+  num_input_points: 10000
+  std_dev: 0.000
+  dataset_name: "train"
+  transforms: ${_scenenn_transforms}
+  split: "train"
+  random_seed: 0
+
+val_dataset: SceneNNDataset
+val_kwargs:
+  base_path: "../../theia2_data/scenenn_seg_76_raw/scenenn_sub_data"
+  over_fitting: ${over_fit}
+  num_input_points: 10000
+  std_dev: 0.00
+  transforms: ${_scenenn_transforms}
+  custom_name: "scenennt"
+  split: "val"
+  random_seed: "fixed"
+
+test_dataset: SceneNNDataset
+test_num_workers: 4
+test_kwargs:
+  base_path: "../../theia2_data/scenenn_seg_76_raw/scenenn_sub_data"
+  over_fitting: ${over_fit}
+  num_input_points: 10000
+  std_dev: 0.00
+  transforms: ${_scenenn_transforms}
+  split: "val"
+  custom_name: "scenennt"
+  random_seed: "fixed"

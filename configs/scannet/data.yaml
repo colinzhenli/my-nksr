@@ -2,11 +2,11 @@
 # ScanNet Configs
 _scannet_transforms:
   - name: "PointcloudNoise"
-    args: { "stddev": 0.025 }
+    args: { "stddev": 0.00 }
 
 train_dataset: ScanNetDataset
 train_val_num_workers: 4
-over_fit: false
+over_fit: True
 
 train_kwargs:
   base_path: "../../theia2_data/scannetv2"

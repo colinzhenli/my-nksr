@@ -71,11 +71,59 @@ class ScanNetDataset(RandomSafeDataset):
         full_data = torch.load(scene_path)
         full_points = full_data['xyz'].astype(np.float32)
         full_normals = full_data['normal'].astype(np.float32)
+        self.uniform_sampling = False
 
         if self.num_input_points != -1:
-            sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
+            if not self.uniform_sampling:
+                # Number of blocks along each axis
+                num_blocks = 3
+                total_blocks = num_blocks ** 3
+                self.common_difference = 25
+                # Calculate block sizes
+                block_sizes = (full_points.max(axis=0) - full_points.min(axis=0)) / num_blocks
+
+                # Create the number_per_block array with an arithmetic sequence
+                average_points_per_block = self.num_input_points // total_blocks
+                number_per_block = np.array([
+                    average_points_per_block + (i - total_blocks // 2) * self.common_difference
+                    for i in range(total_blocks)
+                ])
+                
+                # Adjust number_per_block to ensure the sum is self.num_input_points
+                total_points = np.sum(number_per_block)
+                difference = self.num_input_points - total_points
+                number_per_block[-1] += difference
+
+                # Sample points from each block
+                sample_indices = []
+                block_index = 0
+                total_chosen_indices = 0
+                remaining_points = 0  # Points to be added to the next block
+                for i in range(num_blocks):
+                    for j in range(num_blocks):
+                        for k in range(num_blocks):
+                            block_min = full_points.min(axis=0) + block_sizes * np.array([i, j, k])
+                            block_max = block_min + block_sizes
+                            block_mask = np.all((full_points >= block_min) & (full_points < block_max), axis=1)
+                            block_indices = np.where(block_mask)[0]
+                            num_samples = number_per_block[block_index] + remaining_points
+                            remaining_points = 0  # Reset remaining points
+                            block_index += 1
+                            if len(block_indices) > 0:
+                                chosen_indices = np.random.choice(block_indices, num_samples, replace=True)
+                                sample_indices.extend(chosen_indices)
+                                total_chosen_indices += len(chosen_indices)
+                                # print(f"Block {block_index} - Desired: {num_samples}, Actual: {len(chosen_indices)}")
+                                if len(chosen_indices) < num_samples:
+                                    remaining_points += (num_samples - len(chosen_indices))
+                            else:
+                                # print(f"Block {block_index} - No points available. Adding {num_samples} points to the next block.")
+                                remaining_points += num_samples
+            else:
+                sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
             partial_points = full_points[sample_indices]
             partial_normals = full_normals[sample_indices]
+
 
         else:
             partial_points = full_points

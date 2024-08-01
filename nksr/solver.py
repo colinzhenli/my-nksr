@@ -9,6 +9,10 @@
 import torch
 from pycg import exp
 from nksr.ext import sparse_solve
+from scipy.sparse import coo_matrix
+from scipy.sparse.linalg import splu
+import numpy as np
+from numpy.linalg import norm
 
 
 class SparseMatrixBlock:
@@ -17,7 +21,6 @@ class SparseMatrixBlock:
         self.a_i = a_i
         self.a_j = a_j
         self.a_x = a_x
-
 
 class SparseMatrix:
     def __init__(self, n_block_size: int):
@@ -36,12 +39,53 @@ class SparseMatrix:
         self.block_size[pos_j] = size_j
         self.blocks[(pos_i, pos_j)] = SparseMatrixBlock(
             a_p=sparse_solve.ind2ptr(a_i, size_i),
-            a_i=a_i if a_x.requires_grad else None,
+            # a_i=a_i if a_x.requires_grad else None,
+            a_i=a_i,
             a_j=a_j, a_x=a_x
         )
+        
+    def assemble_sparse_matrix(self):
+        row_indices = []
+        col_indices = []
+        data = []
+        total_size = sum(self.block_size)
 
+        for (pos_i, pos_j), block in self.blocks.items():
+            size_i = self.block_size[pos_i]
+            size_j = self.block_size[pos_j]
+            start_i = sum(self.block_size[:pos_i])
+            start_j = sum(self.block_size[:pos_j])
+
+            for k in range(len(block.a_i)):
+                row_indices.append(start_i + block.a_i[k].item())
+                col_indices.append(start_j + block.a_j[k].item())
+                data.append(block.a_x[k].item())
+
+            if pos_i != pos_j:
+                for k in range(len(block.a_i)):
+                    row_indices.append(start_j + block.a_j[k].item())
+                    col_indices.append(start_i + block.a_i[k].item())
+                    data.append(block.a_x[k].item())
+
+        sparse_matrix = coo_matrix((data, (row_indices, col_indices)), shape=(total_size, total_size))
+        return sparse_matrix
+
+    def compute_condition_number(self, sparse_matrix):
+        lu = splu(sparse_matrix.tocsc())
+        inv_norm = norm(lu.solve(np.ones(sparse_matrix.shape[0])))
+        cond_number = norm(sparse_matrix, ord=np.inf) * inv_norm
+        return cond_number
+    
     def solve(self, rhs: dict, pcg_conf):
         rhs_vec = torch.cat([rhs[d] for d in range(self.n_block_size) if d in rhs])
+        # print(f'length of rhs: {len(rhs_vec)}')
+        sum_length = 0
+        for (i, j), block in self.blocks.items():
+            sum_length += len(block.a_x)
+        # print(f'number of items: {sum_length}')
+
+        # sparse_matrix = self.assemble_sparse_matrix()
+        # cond_number = self.compute_condition_number(sparse_matrix)
         if rhs_vec.requires_grad:
             ax_vec = PCGSolver.assemble_symblk(self)
         else:

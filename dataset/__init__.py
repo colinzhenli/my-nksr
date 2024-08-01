@@ -7,6 +7,7 @@ from .matterport import MatterportDataset
 from .scannet import ScanNetDataset
 from .synthetic import SyntheticRoomDataset
 from .mixture import MixtureDataset
+from .scenenn import SceneNNDataset
 
 
 def build_dataset(name: str, spec, hparams, kwargs: dict):

@@ -424,8 +424,9 @@ class Model(BaseModel):
 
         field = out['field']
         mesh_res = field.extract_dual_mesh(grid_upsample=self.hparams.test_n_upsample, input_xyz = batch[DS.INPUT_PC][0], gt_xyz = batch[DS.GT_DENSE_PC][0])
+        mesh_res = mesh_res[0]
         mesh = vis.mesh(mesh_res.v, mesh_res.f)
-        o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Synthetic.obj", mesh)
+        # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/SceneNN.obj", mesh)
 
         """ naive marching cube mesh """
         # mesh = self.reconstruct_mesh(field, batch[DS.INPUT_PC][0])
@@ -479,7 +480,7 @@ class Model(BaseModel):
             # # our_eval_dict = evaluator.eval_mesh(our_mesh, ref_xyz, ref_normal, onet_samples=onet_samples)
             # # print(our_eval_dict)
 
-            o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", mesh)
+            # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/SceneNN-Kernel-solver-No-growing.obj", mesh)
 
 
         input_pc = batch[DS.INPUT_PC][0]
