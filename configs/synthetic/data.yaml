@@ -14,7 +14,7 @@ train_kwargs:
   multi_files: 10
   over_fitting: ${over_fit}
   num_input_points: 10000
-  std_dev: 0.0025
+  std_dev: 0.00
   dataset_name: "train"
   transforms: ${_scannet_transforms}
   split: "train"
@@ -27,7 +27,7 @@ val_kwargs:
   multi_files: 10
   over_fitting: ${over_fit}
   num_input_points: 10000
-  std_dev: 0.0025
+  std_dev: 0.00
   transforms: ${_scannet_transforms}
   custom_name: "scannet"
   split: "val"
@@ -41,7 +41,7 @@ test_kwargs:
   multi_files: 10
   over_fitting: ${over_fit}
   num_input_points: 10000
-  std_dev: 0.0025
+  std_dev: 0.00
   transforms: ${_scannet_transforms}
   split: "val"
   custom_name: "scannet"

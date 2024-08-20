@@ -331,7 +331,8 @@ class BaseField(ABC):
         grid_time = 0.0
         flattened_grids = []
         self.gt_mask = False
-        self.mesh_res_growing = False
+        self.mesh_res_growing = True
+        self.regular_grid = False
         grid_time -= time.time()
         if not self.mesh_res_growing:
             nksr_svh = SparseFeatureHierarchy(
@@ -339,7 +340,30 @@ class BaseField(ABC):
                 depth=self.svh.depth,
                 device= input_xyz.device
             )
-            nksr_svh.build_point_splatting(input_xyz)
+            if self.regular_grid:
+                resolution = 0.1  # Define the resolution of the grid
+                distance_threshold = 1  # Define the distance threshold
+                offset = 0.5
+
+                min_xyz = torch.min(input_xyz, dim=0).values
+                max_xyz = torch.max(input_xyz, dim=0).values
+                # Apply the offset to the min and max coordinates
+                min_xyz = min_xyz - offset
+                max_xyz = max_xyz + offset
+                x_range = torch.arange(min_xyz[0], max_xyz[0], resolution)
+                y_range = torch.arange(min_xyz[1], max_xyz[1], resolution)
+                z_range = torch.arange(min_xyz[2], max_xyz[2], resolution)
+                xx, yy, zz = torch.meshgrid(x_range, y_range, z_range)
+                grid_points = torch.stack([xx, yy, zz], dim=-1).reshape(-1, 3).to(torch.device("cuda"))
+                nn = NearestNeighbors(n_neighbors=1)
+                nn.fit(input_xyz.detach().cpu().numpy())  # coords is an (N, 3) array
+                dist, indx = nn.kneighbors(grid_points.detach().cpu().numpy())  # xyz is an (M, 3) array
+                dist = torch.from_numpy(dist).to(grid_points.device).squeeze(-1)
+                mask = dist <= distance_threshold
+                masked_grid_points = grid_points[mask]
+                nksr_svh.build_iterative_coarsening(masked_grid_points)
+            else:
+                nksr_svh.build_point_splatting(input_xyz)
             for d in range(min(nksr_svh.depth, max_depth + 1)):
                 f_grid = meshing.build_flattened_grid(
                     nksr_svh.grids[d]._grid,
@@ -393,7 +417,7 @@ class BaseField(ABC):
         if self.mask_field is not None and trim:
             if self.gt_mask:
                 nn = NearestNeighbors(n_neighbors=1)
-                nn.fit(gt_xyz.detach().cpu().numpy())  # coords is an (N, 3) array
+                nn.fit(gt_xyz)  # coords is an (N, 3) array
                 dist, indx = nn.kneighbors(dual_v.detach().cpu().numpy())  # xyz is an (M, 3) array
                 dist = torch.from_numpy(dist).to(dual_v.device).squeeze(-1)
                 vert_mask = dist < 0.04

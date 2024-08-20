@@ -121,9 +121,9 @@ class SyntheticRoomDataset(RandomSafeDataset):
             normals += 1e-4 * np.random.randn(*normals.shape)
 
 
-        # Flip the y and z axes for points and normals and move to positive quadrant
-        points = points[:, [0, 2, 1]]
-        normals = normals[:, [0, 2, 1]]
+        # # Flip the y and z axes for points and normals and move to positive quadrant
+        # points = points[:, [0, 2, 1]]
+        # normals = normals[:, [0, 2, 1]]
         min_values = np.min(points, axis=0)
         points -= min_values
 

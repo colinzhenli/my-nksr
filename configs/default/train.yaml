@@ -54,7 +54,7 @@ adaptive_policy:
   method: "normal"
   tau: 0.1
 
-no_voxel_growing: True
+no_voxel_growing: False
 
 supervision:
   only_l1_sdf_loss: false
@@ -65,18 +65,18 @@ supervision:
   gt_surface:
     value: 200.0
     normal: 100.0
-    subsample: 50000
+    subsample: 10000
 
   spatial:
     weight: 300.0
     reg_sdf_weight: 0.0
     samplers:
       - type: "uniform"
-        n_samples: 50000
+        n_samples: 10000
         expand: 1
         expand_top: 3
       - type: "band"
-        n_samples: 50000
+        n_samples: 10000
         eps: 0.5    # Times voxel size.
     gt_type: "l1"   # or 'l1'
     gt_soft: true
@@ -90,11 +90,11 @@ supervision:
     # weight: 0.0
     samplers:
       - type: "uniform"
-        n_samples: 80000
+        n_samples: 10000
         expand: 1
         expand_top: 5
       - type: "band"
-        n_samples: 20000
+        n_samples: 10000
         eps: 0.5    # Times voxel size.
 
 structure_schedule:

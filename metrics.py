@@ -86,11 +86,12 @@ def sample_and_normalize_pointclouds(pointcloud, pointcloud_tgt, num_samples=100
     in_range_indices = np.all(np.logical_and(pointcloud >= min_range, pointcloud <= max_range), axis=1)
     filtered_pointcloud = pointcloud[in_range_indices]
 
-    # Step 5: Randomly sample 100000 points from the filtered pointcloud
+    # # Step 5: Randomly sample 100000 points from the filtered pointcloud
     if filtered_pointcloud.shape[0] < num_samples:
-        raise ValueError("Not enough points in the filtered pointcloud to sample the desired number of points.")
-    
-    indices = np.random.choice(pointcloud.shape[0], num_samples, replace=False)
+        indices = np.random.choice(pointcloud.shape[0], num_samples, replace=True)
+        # raise ValueError("Not enough points in the filtered pointcloud to sample the desired number of points.")
+    else:
+        indices = np.random.choice(pointcloud.shape[0], num_samples, replace=False)
     sampled_pointcloud = pointcloud[indices, :]
 
     sampled_pointcloud_tgt, scale, translate = normalize_pointcloud_to_unit_cube(sampled_pointcloud_tgt)
@@ -213,6 +214,26 @@ class MeshEvaluator:
             for i in range(len(precision))
         ]
 
+        # out_dict = {
+        #     'completeness': completeness,
+        #     'accuracy': accuracy,
+        #     'normals completeness': completeness_normals,
+        #     'normals accuracy': accuracy_normals,
+        #     'normals': normals_correctness,
+        #     'completeness2': completeness2,
+        #     'accuracy2': accuracy2,
+        #     'chamfer-L2': chamfer_l2,
+        #     'chamfer-L1': chamfer_l1,
+        #     'f-precision': precision[self.fidx[0]],
+        #     'f-recall': recall[self.fidx[0]],
+        #     'f-score': F[self.fidx[0]],  # threshold = 1.0%
+        #     'f-score-15': F[self.fidx[1]],  # threshold = 1.5%
+        #     'f-score-20': F[self.fidx[2]],  # threshold = 2.0%
+        #     # -- F-outdoor
+        #     'f-precision-outdoor': precision[self.fidx[4]],
+        #     'f-recall-outdoor': recall[self.fidx[4]],
+        #     'f-score-outdoor': F[self.fidx[4]]
+        # }
         out_dict = {
             'completeness': completeness,
             'accuracy': accuracy,
@@ -223,15 +244,10 @@ class MeshEvaluator:
             'accuracy2': accuracy2,
             'chamfer-L2': chamfer_l2,
             'chamfer-L1': chamfer_l1,
-            'f-precision': precision[self.fidx[0]],
-            'f-recall': recall[self.fidx[0]],
-            'f-score': F[self.fidx[0]],  # threshold = 1.0%
-            'f-score-15': F[self.fidx[1]],  # threshold = 1.5%
-            'f-score-20': F[self.fidx[2]],  # threshold = 2.0%
-            # -- F-outdoor
-            'f-precision-outdoor': precision[self.fidx[4]],
-            'f-recall-outdoor': recall[self.fidx[4]],
-            'f-score-outdoor': F[self.fidx[4]]
+            "f-score-05": 0, # threshold = 0.5%
+            'f-score': F[self.fidx[4]], # threshold = 1.0%
+            'f-score-15': F[self.fidx[1]], # threshold = 1.5%
+            'f-score-20': F[self.fidx[2]], # threshold = 2.0%
         }
 
         if onet_samples is not None:
@@ -244,9 +260,10 @@ class MeshEvaluator:
                       (np.sum(np.logical_or(onet_pd_occ, onet_gt_occ)) + 1.0e-6)
                 out_dict['o3d-iou'] = iou
 
-        return {
-            k: out_dict[k] for k in self.metric_names
-        }
+        # return {
+        #     k: out_dict[k] for k in self.metric_names
+        # }
+        return out_dict, 0, 0
     
 class UnitMeshEvaluator:
 

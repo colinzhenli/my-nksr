@@ -22,9 +22,10 @@ from torch.nn import functional as F
 from pycg import vis, exp
 from pathlib import Path
 import numpy as np
-from metrics import UnitMeshEvaluator
+from metrics import UnitMeshEvaluator, MeshEvaluator
 from torch.utils.data import Dataset
 from tqdm import tqdm
+from dataset.av_gt_geometry import get_class
 
 
 import zeus
@@ -49,6 +50,8 @@ class ScanNetDataset(Dataset):
     def __init__(self, split, partial_input=False, **kwargs):
         self.over_fitting = kwargs.get("over_fitting", False)
         self.uniform_sampling = kwargs.get("uniform_sampling", False)
+        self.intake_start = kwargs.get("intake_start", 0)
+        self.take = kwargs.get("take", 1)
         self.num_input_points = kwargs.get("num_input_points", 5000)
         self.std_dev = kwargs.get("std_dev", 0.00)
 
@@ -67,21 +70,26 @@ class ScanNetDataset(Dataset):
         
         # self.scenes = self.scenes[:4]
         if self.over_fitting:
-            self.split = 'val'
-            self.scenes = ['scene0221_00']
+            with (self.base_path / "metadata" / "scannetv2_val.txt").open() as f:
+                self.scenes = [t.strip() for t in f.readlines()]
+                self.split = 'val'
+            self.scenes = self.scenes[self.intake_start:self.take+self.intake_start]
         
     def __len__(self):
         return len(self.scenes)
 
     def _get_item(self, data_id, rng):
-        scene_name = self.scenes[data_id]
+        if self.over_fitting:
+            scene_name = self.scenes[0]
 
         data = {}
         scene_path = os.path.join(self.base_path, self.split, f"{scene_name}.pth")
         full_data = torch.load(scene_path)
         full_points = full_data['xyz'].astype(np.float32)
         full_normals = full_data['normal'].astype(np.float32)
-
+        seed_value = 42
+        num_points = len(full_points)
+        np.random.seed(seed_value)
         if self.num_input_points != -1:
             if not self.uniform_sampling:
                 # Number of blocks along each axis
@@ -129,7 +137,11 @@ class ScanNetDataset(Dataset):
                                 # print(f"Block {block_index} - No points available. Adding {num_samples} points to the next block.")
                                 remaining_points += num_samples
             else:
-                sample_indices = np.random.choice(full_points.shape[0], self.num_input_points, replace=True)
+                if num_points < self.num_input_points:
+                    print(f"Scene {scene_name} has less than {self.num_input_points} points. Sampling with replacement.")
+                    sample_indices = np.random.choice(num_points, self.num_input_points, replace=True)
+                else:
+                    sample_indices = np.random.choice(num_points, self.num_input_points, replace=True)
             partial_points = full_points[sample_indices]
             partial_normals = full_normals[sample_indices]
 
@@ -150,6 +162,98 @@ class ScanNetDataset(Dataset):
         }
 
         return data
+class CarlaDataset(Dataset):
+    def __init__(self, split, partial_input=False, **kwargs):
+        self.over_fitting = kwargs.get("over_fitting", False)
+        self.std_dev = kwargs.get("std_dev", 0.00)
+        self.custom_name = 'Carla'
+        self.gt_type = "PointTSDFVolume"
+
+        self.split = 'train' if self.over_fitting else split # use only train set for overfitting
+        self.file_name = 'pointcloud'
+        self.multi_files = 10
+        categories = kwargs.get("classes", None)
+        self.over_fitting = kwargs.get("over_fitting", False)
+        self.intake_start = kwargs.get("intake_start", 1)
+        self.take = kwargs.get("take", 1)
+        self.num_input_points = kwargs.get("num_input_points", 10000)
+        self.std_dev = kwargs.get("std_dev", 0.00)
+        self.std_dev *= 2
+
+
+        self.split = split
+        self.use_dummy_gt = False
+
+        # If drives not specified, use all sub-folders
+        drives =  ['Town01-0', 'Town01-1', 'Town01-2',
+                'Town02-0', 'Town02-1', 'Town02-2',
+                'Town10-0', 'Town10-1', 'Town10-2', 'Town10-3', 'Town10-4']
+
+        base_path = '/localhome/zla247/theia2_data/carla-lidar/dataset-no-patch'
+        base_path = Path(base_path)
+        if drives is None:
+            drives = os.listdir(base_path)
+            drives = [c for c in drives if (base_path / c).is_dir()]
+        self.drives = drives
+        self.input_path = '/localhome/zla247/theia2_data/carla-lidar/dataset-p1n2-no-patch'
+
+        # Get all items
+        self.all_items = []
+        self.drive_base_paths = {}
+        for c in drives:
+            self.drive_base_paths[c] = base_path / c
+            split_file = self.drive_base_paths[c] / (split + '.lst')
+            with split_file.open('r') as f:
+                models_c = f.read().split('\n')
+            if '' in models_c:
+                models_c.remove('')
+            self.all_items += [{'drive': c, 'item': m} for m in models_c]
+
+        if self.over_fitting:
+            self.all_items = self.all_items[self.intake_start:self.take+self.intake_start]
+
+    def __len__(self):
+        return len(self.all_items)
+
+    def get_name(self):
+        return f"{self.custom_name}-cat{len(self.drives)}-{self.split}"
+
+    def get_short_name(self):
+        return self.custom_name
+
+    def _get_item(self, data_id, rng):
+        drive_name = self.all_items[data_id]['drive']
+        item_name = self.all_items[data_id]['item']
+
+        named_data = {}
+        data = {}
+        
+
+        try:
+            if self.input_path is None:
+                input_data = np.load(self.drive_base_paths[drive_name] / item_name / 'pointcloud.npz')
+            else:
+                input_data = np.load(Path(self.input_path) / drive_name / item_name / 'pointcloud.npz')
+        except FileNotFoundError:
+            exp.logger.warning(f"File not found for AV dataset for {item_name}")
+            raise ConnectionAbortedError
+        
+        xyz = input_data['points'].astype(np.float32)
+        normals = input_data['normals'].astype(np.float32)
+
+        geom_cls = get_class(self.gt_type)
+        gt_geometry = geom_cls.load(self.drive_base_paths[drive_name] / item_name / "groundtruth.bin")
+
+        ref_xyz, ref_normal, _ = gt_geometry.torch_attr()
+
+
+        data = {
+            "partial_input": xyz,
+            "partial_normal": normals,
+            "full_input": ref_xyz.cpu().numpy(),
+            "full_normal": ref_normal.cpu().numpy()
+        }
+        return data
 
 class SyntheticRoomDataset(Dataset):
     def __init__(self, split, partial_input=False, **kwargs):
@@ -158,11 +262,12 @@ class SyntheticRoomDataset(Dataset):
         self.custom_name = 'Synthetic'
         self.scale = 2.2
 
-        self.split = 'train' if self.over_fitting else split # use only train set for overfitting
+        self.split = 'val' if self.over_fitting else split # use only train set for overfitting
+        split = self.split
         self.dataset_folder = kwargs.get("base_path", None)
         self.file_name = 'pointcloud'
         self.multi_files = 10
-        categories = kwargs.get("classes", None)
+        categories = ['rooms_04', 'rooms_05', 'rooms_06', 'rooms_07', 'rooms_08']
         self.over_fitting = kwargs.get("over_fitting", False)
         self.intake_start = kwargs.get("intake_start", 0)
         self.take = kwargs.get("take", 1)
@@ -170,7 +275,6 @@ class SyntheticRoomDataset(Dataset):
         self.std_dev = kwargs.get("std_dev", 0.00)
         self.std_dev *= 2
 
-        self.split = 'val' if self.over_fitting else split # use only train set for overfitting
         # self.split = 'val'
         # If categories is None, use all subfolders
         if categories is None:
@@ -253,9 +357,9 @@ class SyntheticRoomDataset(Dataset):
             normals += 1e-4 * np.random.randn(*normals.shape)
 
 
-        # Flip the y and z axes for points and normals and move to positive quadrant
-        points = points[:, [0, 2, 1]]
-        normals = normals[:, [0, 2, 1]]
+        # # Flip the y and z axes for points and normals and move to positive quadrant
+        # points = points[:, [0, 2, 1]]
+        # normals = normals[:, [0, 2, 1]]
         min_values = np.min(points, axis=0)
         points -= min_values
 
@@ -446,10 +550,13 @@ if __name__ == '__main__':
 
         else: 
             """ test from reconstructor """
+            intake_id = 148
             # Initialize the ScanNetDataset
-            dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=False, num_input_points=10000, std_dev=0.00, uniform_sampling=False)
-            # dataset = SceneNNDataset(split='val', partial_input=True, dataset_folder='/localhome/zla247/theia2_data/scenenn_seg_76_raw/scenenn_sub_data', over_fitting=True, num_input_points=2000000, std_dev=0.00)
-            # dataset = SyntheticRoomDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia2_data/synthetic_data/synthetic_room_dataset', over_fitting=True, num_input_points=10000, std_dev=0.00)
+            dataset = ScanNetDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia1_data/scannetv2', over_fitting=True, intake_start=intake_id,  num_input_points=10000, std_dev=0.00, uniform_sampling=True)
+            # dataset = SceneNNDataset(split='val', partial_input=True, dataset_folder='/localhome/zla247/theia2_data/scenenn_seg_76_raw/scenenn_sub_data', over_fitting=True, num_input_point=10000, std_dev=0.00)
+            # dataset = SyntheticRoomDataset(split='val', partial_input=True, base_path='/localhome/zla247/theia2_data/synthetic_data/synthetic_room_dataset', over_fitting=True, intake_start=intake_id, num_input_points=10000, std_dev=0.00)
+            # dataset = CarlaDataset(split='val', partial_input=True, over_fitting=True, intake_start=2, num_input_points=10000, std_dev=0.00)
+
             # Initialize a device
             device = torch.device("cuda")
             net_model.network.to(device).eval().requires_grad_(False)
@@ -507,12 +614,14 @@ if __name__ == '__main__':
                 print(f"Time taken for the grid: {total_grid_duration:.2f} seconds")
                 print(f"Total SDF error: {total_sdf_error:.5f}")
                 print(f"Total normal error: {total_normal_error:.5f}")
-                # Evaluate the reconstructed mesh
+                # # Evaluate the reconstructed mesh
                 evaluator = UnitMeshEvaluator(n_points=100000, metric_names=UnitMeshEvaluator.ESSENTIAL_METRICS)
+                # evaluator = MeshEvaluator(n_points=int(5e6), metric_names=MeshEvaluator.ESSENTIAL_METRICS)
                 eval_dict, translation, scale = evaluator.eval_mesh(nksr_mesh, torch.from_numpy(data['full_input']), torch.from_numpy(data['full_normal']), onet_samples=None)
                 eval_dict["data_id"] = data_id
                 results_dict.append(eval_dict)
-                # o3d.io.write_triangle_mesh("../../theia2_data/Visualizations/DMC_visualizations/Trained-on-carla_NKSR-Kernel-solver-No-growing.obj", nksr_mesh)
+                # o3d.io.write_triangle_mesh(f"../../theia2_data/Visualizations/DMC_visualizations/ScanNet-{intake_id}_NKSR.obj", nksr_mesh)
+
                 # # Accumulate evaluation metrics
                 for key in accumulated_eval_dict.keys():
                     if key in eval_dict:

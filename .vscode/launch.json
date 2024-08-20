@@ -13,36 +13,22 @@
             "justMyCode": false,
             "args": [
                 "configs/scannet/train.yaml",
+                // "--url",
+                // "https://nksr.huangjh.tech/carla.pth" /* pretrained Carla on mixture dataset */
                 // "--ckpt",
-                // "/localhome/zla247/theia1_data/output/NKSR/Synthetic-ScanNet/nksr-scannet/twzxpoib/checkpoints/epoch=65-val_loss=76.26.ckpt"/* 4K Input */
-                // "/localhome/zla247/theia1_data/output/NKSR/Synthetic-ScanNet/nksr-synthetic-scannet/sbjcdtgo/checkpoints/epoch=02-val_loss=67.83.ckpt" 
-                // "/localhome/zla247/theia1_data/output/NKSR/Synthetic-ScanNet/nksr-synthetic-scannet/b6tdagcy/checkpoints/epoch=26-val_loss=44.73.ckpt" /* no-voxel-growing */
-                // "/localhome/zla247/theia1_zla247/projects/theia2_data/output/NKSR/Carla/nksr-synthetic-noise-0.005/d392jwno/checkpoints/epoch=38-val_loss=46.59.ckpt"
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-carla/g2xmejwy/checkpoints/epoch=03-val_loss=61.33.ckpt"
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/wavba4rb/checkpoints/epoch=16-val_loss=97.15.ckpt"
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/ueudqezr/checkpoints/epoch=08-val_loss=86.99.ckpt"
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/jbbsmgna/checkpoints/epoch=12-val_loss=80.67.ckpt" 
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/qnoy1mnc/checkpoints/epoch=59-val_loss=57.48.ckpt"/* No Voxel Growing */
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/NKSR-Attention_Fourier_Enc-interpolated-hidden-15-16-32_Alpha_Cat_theia_epoch=17-val_loss=80.38.ckpt"
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/checkpoints/NKSR-Attention_Fourier_Enc-interpolated-hidden-33-16-32_Alpha_Cat_theia_epoch=18-val_loss=75.85.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Fourier-PosEnc_Analytic-normal_Attention_ResMLP_1.5Mask_Alpha_Cat_No-growing_theia_epoch=05-val_loss=83.80.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Correct_Fourier-PosEnc_Analytic-normal_Attention_LinearScore_1.5Mask_Alpha_Cat_No-growing_theia_epoch=10-val_loss=90.39.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Analytic-normal_Attention_ResMLP_1.5Mask_Alpha_Cat_No-growing_theia_epoch=13-val_loss=84.96.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Voxel-0.02_NeuralDecoder_No-growing_All-losses_epoch=85-val_loss=64.86.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=09-val_loss=119.95.ckpt",
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/jbbsmgna/checkpoints/epoch=12-val_loss=80.67.ckpt" /* ScanNet with voxel growing */
+                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/nksr-scannet/qnoy1mnc/checkpoints/epoch=59-val_loss=57.48.ckpt"/* ScanNet No Voxel Growing */
+                // "/localhome/zla247/theia1_data/output/NKSR/Synthetic/nksr-synthetic/nn7fyl8f/checkpoints/epoch=86-val_loss=28.83.ckpt" /* Synthetic with growing */
+                // "/localhome/zla247/theia1_data/output/NKSR/Synthetic/nksr-synthetic/dz0iliny/checkpoints/epoch=41-val_loss=30.29.ckpt" /* Synthetic better numbers */
+                // "/localhome/zla247/theia1_data/output/NKSR/ScanNet/nksr-scannet/1nc876ik/checkpoints/epoch=07-val_loss=91.81.ckpt"/* Irregular Inputs */
+                // "/localhome/zla247/theia1_data/output/NKSR/ScanNet/nksr-scannet/lsmepmzv/checkpoints/epoch=75-val_loss=68.42.ckpt" /* Irregular Inputs without growing */
+                // "/localhome/zla247/theia1_data/output/NKSR/Synthetic-ScanNet/nksr-synthetic-scannet/sbjcdtgo/checkpoints/epoch=02-val_loss=67.83.ckpt" /* Mixture dataset */
+                // "/localhome/zla247/theia1_data/output/NKSR/Synthetic-ScanNet/nksr-synthetic-scannet/b6tdagcy/checkpoints/epoch=26-val_loss=44.73.ckpt" /* Synthetic no-voxel-growing */
+
+                /* Neural Decoder with trilinear interpolation */
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/neural-decoder_all-losses_epoch=90-val_loss=83.53.ckpt",
                 // "/localhome/zla247/theia1_data/output/NKSR/Scannet/checkpoints/Trilinear_No-growing_epoch=91-val_loss=64.08.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Analytic-normal_UDF-loss_Attention_All-Samples_1.5Mask_alpha_Cat_No-growing_theia_epoch=18-val_loss=83.19.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/All-Samples_1.5Mask_Alpha_Cat_Voxel-0.02_Attention-Decoder_No-growing_theia_epoch=23-val_loss=64.50.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Voxel-0.02_AttentionDecoder_No-growing_No-UDF-losses_epoch=35-val_loss=67.56.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/Analytic-normal_UDF-loss_Attention_All-Samples_1.5Mask_alpha_Cat_No-growing_theia_epoch=13-val_loss=90.20.ckpt"
                 // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/neural-decoder_only-l1_epoch=07-val_loss=42.38.ckpt", 
-                // normal inputs 
-                // "/localhome/zla247/theia1_data/output/NKSR/Scannet/checkpoints/epoch=08-val_loss=80.75.ckpt", 
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/All-Samples_1.5Mask_Alpha_Cat_Voxel-0.02_Attention-Decoder_No-growing_theia_epoch=11-val_loss=73.47.ckpt"
-                // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/attention-decoder_all-losses_epoch=03-val_loss=228.80.ckpt",         
-                // "--include",
-                // "configs/points2surf/data_abc_test.yaml"
             ]  
             // "name": "Python: Current File",
             // "type": "python",
@@ -53,10 +39,8 @@
             // "args": [
             //     "configs/scannet/train.yaml",
             //     "--ckpt",
-            //     // "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=09-val_loss=119.95.ckpt",
             //     "/localhome/zla247/data/output/Scannet/NKSR/checkpoints/epoch=08-val_loss=80.75.ckpt",              
             //     // "--include",
-            //     // "configs/points2surf/data_abc_test.yaml"
             // ]  
         }
     ]
